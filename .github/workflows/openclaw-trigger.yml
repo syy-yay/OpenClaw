@@ -1,0 +1,17 @@
+name: Trigger OpenClaw Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify OpenClaw
+        run: |
+          curl -s -X POST \
+            "${{ secrets.OPENCLAW_HOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"GitHub Push: repo=${{ github.repository }} branch=${{ github.ref_name }} commit=${{ github.sha }} by=${{ github.actor }}\"}"
