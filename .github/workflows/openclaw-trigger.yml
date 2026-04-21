@@ -14,4 +14,4 @@ jobs:
             "${{ secrets.OPENCLAW_HOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"text\":\"GitHub Push: repo=${{ github.repository }} branch=${{ github.ref_name }} commit=${{ github.sha }} by=${{ github.actor }}\"}"
+            -d "{\"message\":\"GitHub Push 事件：repo=${{ github.repository }} branch=${{ github.ref_name }} commit=${{ github.sha }} by=${{ github.actor }}。请按 AGENTS.md 流水线规则立即执行：拉取代码、SonarQube 扫描、安全扫描、Docker 构建，完成后发送报告。\",\"name\":\"GitHub Push\",\"wakeMode\":\"now\",\"deliver\":true,\"channel\":\"feishu\",\"to\":\"oc_54cf8d01fa1eb9f33797dd18698c7bac\"}"
