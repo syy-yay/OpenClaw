@@ -1,17 +1,17 @@
-name: Trigger OpenClaw Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main]
 
 jobs:
-  notify:
+  pipeline:
     runs-on: ubuntu-latest
     steps:
-      - name: Notify OpenClaw
-        run: |
-          curl -s -X POST \
-            "${{ secrets.OPENCLAW_HOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"message\":\"GitHub Push 事件：repo=${{ github.repository }} branch=${{ github.ref_name }} commit=${{ github.sha }} by=${{ github.actor }}。请按 AGENTS.md 流水线规则立即执行：拉取代码、SonarQube 扫描、安全扫描、Docker 构建，完成后发送报告。\",\"name\":\"GitHub Push\",\"wakeMode\":\"now\",\"deliver\":true,\"channel\":\"feishu\",\"to\":\"oc_54cf8d01fa1eb9f33797dd18698c7bac\"}"
+      - name: Run Pipeline via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: bash ~/pipeline.sh
