@@ -123,6 +123,21 @@
             font-size: 0.85rem;
         }
         
+        .logout-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
         @media (max-width: 768px) {
             .header-section {
                 padding: 1.5rem 0;
@@ -146,8 +161,11 @@
                     <div class="d-flex justify-content-md-end align-items-center gap-3">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-user-circle me-2 text-white"></i>
-                            <span class="text-white">管理员</span>
+                            <span class="text-white" id="current-username">用户</span>
                         </div>
+                        <button class="logout-btn" id="logout-btn" title="退出登录">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -266,6 +284,44 @@
         const completedTasksEl = document.getElementById('completed-tasks');
         const inProgressTasksEl = document.getElementById('in-progress-tasks');
         const pendingTasksEl = document.getElementById('pending-tasks');
+        const currentUsernameEl = document.getElementById('current-username');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        // 检查会话状态
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check-session');
+                if (response.status === 401) {
+                    // 会话无效，重定向到登录页
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const result = await response.json();
+                if (result.authenticated && result.user) {
+                    currentUsernameEl.textContent = result.user.username;
+                    return true;
+                } else {
+                    window.location.href = '/login';
+                    return false;
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // 登出功能
+        logoutBtn.addEventListener('click', async function() {
+            try {
+                await fetch('/logout');
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            }
+        });
 
         // 切换表单显示/隐藏
         toggleFormBtn.addEventListener('click', function() {
@@ -316,6 +372,8 @@
                     
                     // 显示成功提示
                     showToast('任务创建成功！', 'success');
+                } else if (response.status === 401) {
+                    window.location.href = '/login';
                 } else {
                     throw new Error('创建任务失败');
                 }
@@ -329,6 +387,11 @@
         async function fetchTasks() {
             try {
                 const response = await fetch('/api/tasks');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                
                 if (response.ok) {
                     tasks = await response.json();
                     renderTasks();
@@ -353,7 +416,7 @@
                     <div class="text-center py-5">
                         <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted mb-2">暂无任务</h5>
-                        <p class="text-muted">点击上方“创建新任务”按钮开始添加您的第一个任务</p>
+                        <p class="text-muted">点击上方"创建新任务"按钮开始添加您的第一个任务</p>
                     </div>
                 `;
                 updateStats();
@@ -497,6 +560,8 @@
                         };
                         
                         showToast('任务更新成功！', 'success');
+                    } else if (response.status === 401) {
+                        window.location.href = '/login';
                     } else {
                         throw new Error('更新任务失败');
                     }
@@ -522,6 +587,8 @@
                     tasks = tasks.filter(t => t.id !== taskId);
                     renderTasks();
                     showToast('任务删除成功！', 'success');
+                } else if (response.status === 401) {
+                    window.location.href = '/login';
                 } else {
                     throw new Error('删除任务失败');
                 }
@@ -583,7 +650,11 @@
         }
 
         // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 检查会话状态
+            const sessionValid = await checkSession();
+            if (!sessionValid) return;
+            
             // 初始化表单
             document.getElementById('task-title').focus();
             
