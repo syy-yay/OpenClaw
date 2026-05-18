@@ -94,6 +94,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: opacity 0.2s, transform 0.1s;
+            margin-bottom: 1rem;
         }
         .btn-login:hover:not(:disabled) { opacity: 0.9; }
         .btn-login:active:not(:disabled) { transform: scale(0.98); }
@@ -149,6 +150,53 @@
             text-align: center;
             display: none;
         }
+        
+        /* 第三方登录 */
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .divider::before { margin-right: 1rem; }
+        .divider::after { margin-left: 1rem; }
+        
+        .oauth-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .oauth-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .oauth-btn:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .oauth-btn.github { color: #333; }
+        .oauth-btn.wechat { color: #28a745; }
+        .oauth-btn.qq { color: #1DA1F2; }
+        .oauth-icon {
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 <body>
@@ -174,6 +222,20 @@
             <button type="submit" class="btn-login" id="submitBtn">登录</button>
             <div class="lockout-msg" id="lockoutMsg"></div>
         </form>
+        
+        <div class="divider">或使用第三方账号登录</div>
+        <div class="oauth-buttons">
+            <button class="oauth-btn github" onclick="oauthLogin('github')">
+                <span class="oauth-icon">🐙</span> GitHub
+            </button>
+            <button class="oauth-btn wechat" onclick="oauthLogin('wechat')">
+                <span class="oauth-icon">💬</span> 微信
+            </button>
+            <button class="oauth-btn qq" onclick="oauthLogin('qq')">
+                <span class="oauth-icon">🐧</span> QQ
+            </button>
+        </div>
+        
         <div id="message" class="message"></div>
         <div class="footer">
             还没有账号？<a href="/register">立即注册</a>
@@ -237,6 +299,11 @@
                 submitBtn.textContent = '登录';
             }
         });
+
+        function oauthLogin(provider) {
+            // 第三方登录跳转
+            window.location.href = `/auth/${provider}`;
+        }
 
         function showMessage(text, type) {
             const msgDiv = document.getElementById('message');

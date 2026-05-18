@@ -2,7 +2,7 @@
 """团队任务管理系统 - 后端主程序"""
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from functools import wraps
-from models import db, Task, User
+from models import db, Task, User, LoginLog
 import os
 import time
 from datetime import datetime, timedelta
@@ -120,6 +120,23 @@ def create_app():
             return decorated
         return decorator
 
+    # ==================== 登录日志 ====================
+    def log_login_attempt(user=None, username_attempted=None, success=False, 
+                         failure_reason=None, login_method='password'):
+        """记录登录尝试"""
+        log = LoginLog(
+            user_id=user.id if user else None,
+            username_attempted=username_attempted,
+            ip_address=request.remote_addr or 'unknown',
+            user_agent=request.headers.get('User-Agent', '')[:500],
+            success=success,
+            failure_reason=failure_reason,
+            login_method=login_method,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(log)
+        db.session.commit()
+
     # ==================== 数据库初始化 ====================
     with app.app_context():
         db.create_all()
@@ -151,11 +168,15 @@ def create_app():
 
             # 基础校验
             if not identity or not password:
+                log_login_attempt(username_attempted=identity, success=False, 
+                                failure_reason='missing_fields', login_method='password')
                 return jsonify({'success': False, 'message': '请输入账号和密码'}), 400
 
             # 检查是否被锁定
             locked, remaining = rate_limiter.is_locked(identity)
             if locked:
+                log_login_attempt(username_attempted=identity, success=False, 
+                                failure_reason='rate_limited', login_method='password')
                 return jsonify({
                     'success': False,
                     'message': f'登录失败次数过多，请 {remaining} 秒后再试',
@@ -173,6 +194,9 @@ def create_app():
                 user.last_login = datetime.utcnow()
                 db.session.commit()
 
+                # 记录成功登录
+                log_login_attempt(user=user, success=True, login_method='password')
+
                 session.permanent = remember_me
                 session['user_id'] = user.id
                 session['username'] = user.username
@@ -188,6 +212,8 @@ def create_app():
             else:
                 # 登录失败：记录
                 rate_limiter.record_failure(identity)
+                log_login_attempt(username_attempted=identity, success=False, 
+                                failure_reason='invalid_credentials', login_method='password')
                 _, remaining = rate_limiter.is_locked(identity)
                 if remaining > 0:
                     return jsonify({
@@ -274,12 +300,41 @@ def create_app():
 
     @app.route('/logout')
     def logout():
+        # 记录登出时间
+        user = get_current_user()
+        if user:
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+        
         session.pop('user_id', None)
         session.pop('username', None)
         session.pop('user_role', None)
         session.pop('login_time', None)
         session.pop('login_ip', None)
         return redirect(url_for('login'))
+
+    # ==================== OAuth 路由 ====================
+    @app.route('/auth/<provider>')
+    def oauth_login(provider):
+        """OAuth 登录入口"""
+        if provider not in ['github', 'wechat', 'qq']:
+            return jsonify({'error': '不支持的登录方式'}), 400
+        
+        # 这里应该重定向到对应的 OAuth 提供商
+        # 示例：return redirect(get_oauth_authorize_url(provider))
+        return jsonify({'message': f'{provider} OAuth 登录功能待实现'}), 200
+
+    @app.route('/auth/<provider>/callback')
+    def oauth_callback(provider):
+        """OAuth 回调处理"""
+        if provider not in ['github', 'wechat', 'qq']:
+            return jsonify({'error': '不支持的登录方式'}), 400
+            
+        # 这里应该处理 OAuth 回调，获取用户信息并登录
+        # 示例：user_info = get_oauth_user_info(provider, request.args.get('code'))
+        #       user = create_or_find_user_from_oauth(provider, user_info)
+        #       login_user(user)
+        return jsonify({'message': f'{provider} OAuth 回调处理功能待实现'}), 200
 
     # ==================== API 路由 ====================
     @app.route('/api/check-session')
