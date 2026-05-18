@@ -3,222 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - 团队任务管理系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>用户登录 - 任务管理系统</title>
     <style>
-        :root {
-            --primary-color: #4a6fa5;
-            --secondary-color: #6c757d;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --light-bg: #f8f9fa;
-            --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 1rem;
         }
-        
-        .login-container {
-            width: 100%;
-            max-width: 450px;
-            padding: 2rem;
-        }
-        
-        .login-card {
+        .container {
             background: white;
+            padding: 2.5rem;
             border-radius: 16px;
-            box-shadow: var(--card-shadow);
-            border: none;
-            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 420px;
+            animation: fadeIn 0.4s ease-out;
         }
-        
-        .login-header {
-            background: linear-gradient(135deg, var(--primary-color), #2c3e50);
-            color: white;
-            padding: 2rem;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
             text-align: center;
+            margin-bottom: 2rem;
         }
-        
-        .login-body {
-            padding: 2rem;
+        .header h2 { color: #333; font-size: 1.75rem; margin-bottom: 0.5rem; }
+        .header p { color: #888; font-size: 0.9rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            color: #444;
+            font-weight: 500;
+            font-size: 0.9rem;
         }
-        
-        .form-control {
+        label .required { color: #e74c3c; }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e8e8e8;
             border-radius: 8px;
-            padding: 0.8rem 1rem;
-            border: 2px solid #e9ecef;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #fafafa;
         }
-        
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25);
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+            background: white;
         }
-        
-        .btn-login {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            border-radius: 8px;
-            padding: 0.8rem;
-            font-weight: 600;
-            font-size: 1.1rem;
+        .input-hint {
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            color: #888;
         }
-        
-        .btn-login:hover {
-            background-color: #3a5a80;
-            border-color: #3a5a80;
+        .remember-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
         }
-        
-        .input-group-text {
-            background-color: #f8f9fa;
-            border-right: none;
-        }
-        
-        .error-message {
-            color: var(--danger-color);
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-        
-        .divider {
+        .remember-row label {
             display: flex;
             align-items: center;
-            text-align: center;
-            margin: 1.5rem 0;
-            color: var(--secondary-color);
+            gap: 0.5rem;
+            cursor: pointer;
+            margin-bottom: 0;
         }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #dee2e6;
+        .remember-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #667eea;
         }
-        
-        .divider::before {
-            margin-right: 1rem;
-        }
-        
-        .divider::after {
-            margin-left: 1rem;
-        }
-        
-        .demo-credentials {
-            background-color: #f8f9fa;
+        .btn-login {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
             border-radius: 8px;
-            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-login:hover:not(:disabled) { opacity: 0.9; }
+        .btn-login:active:not(:disabled) { transform: scale(0.98); }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-login .spinner {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .message.success {
+            background-color: #d4edda; color: #155724;
+            border: 1px solid #c3e6cb; display: block;
+        }
+        .message.error {
+            background-color: #f8d7da; color: #721c24;
+            border: 1px solid #f5c6cb; display: block;
+        }
+        .footer {
+            text-align: center;
             margin-top: 1.5rem;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .footer a { color: #667eea; text-decoration: none; font-weight: 500; }
+        .footer a:hover { text-decoration: underline; }
+        .lock-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .lockout-msg {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 0.8rem;
+            text-align: center;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <h2><i class="fas fa-lock me-2"></i>团队任务管理系统</h2>
-                <p class="mb-0 mt-2">请登录以继续</p>
+    <div class="container">
+        <div class="header">
+            <span class="lock-icon">🔐</span>
+            <h2>欢迎回来</h2>
+            <p>登录以继续操作</p>
+        </div>
+        <form id="loginForm" novalidate>
+            <div class="form-group">
+                <label for="identity">账号 <span class="required">*</span></label>
+                <input type="text" id="identity" name="identity" placeholder="用户名 / 邮箱 / 手机号" required>
+                <div class="input-hint">支持用户名、邮箱或手机号登录</div>
             </div>
-            
-            <div class="login-body">
-                <form id="login-form">
-                    <div class="mb-4">
-                        <label for="username" class="form-label">用户名</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="password" class="form-label">密码</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-key"></i></span>
-                            <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember-me">
-                        <label class="form-check-label" for="remember-me">记住我</label>
-                    </div>
-                    
-                    <div id="error-message" class="error-message mb-3" style="display: none;"></div>
-                    
-                    <button type="submit" class="btn btn-primary btn-login w-100">
-                        <i class="fas fa-sign-in-alt me-2"></i>登录
-                    </button>
-                </form>
-                
-                <div class="demo-credentials">
-                    <p class="mb-1"><strong>演示账号:</strong></p>
-                    <p class="mb-1"><strong>用户名:</strong> admin</p>
-                    <p class="mb-0"><strong>密码:</strong> admin123</p>
-                </div>
+            <div class="form-group">
+                <label for="password">密码 <span class="required">*</span></label>
+                <input type="password" id="password" name="password" placeholder="请输入密码" required>
             </div>
+            <div class="remember-row">
+                <label><input type="checkbox" id="rememberMe"> 记住我</label>
+            </div>
+            <button type="submit" class="btn-login" id="submitBtn">登录</button>
+            <div class="lockout-msg" id="lockoutMsg"></div>
+        </form>
+        <div id="message" class="message"></div>
+        <div class="footer">
+            还没有账号？<a href="/register">立即注册</a>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('login-form').addEventListener('submit', async function(e) {
+        const form = document.getElementById('loginForm');
+        const identityInput = document.getElementById('identity');
+        const passwordInput = document.getElementById('password');
+        const rememberMe = document.getElementById('rememberMe');
+        const submitBtn = document.getElementById('submitBtn');
+        const lockoutMsg = document.getElementById('lockoutMsg');
+
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
-            
-            // 隐藏之前的错误信息
-            errorMessage.style.display = 'none';
-            
-            // 验证输入
-            if (!username || !password) {
-                showError('请输入用户名和密码');
+
+            const identity = identityInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!identity || !password) {
+                showMessage('请输入账号和密码', 'error');
                 return;
             }
-            
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span>登录中...';
+            lockoutMsg.style.display = 'none';
+
             try {
                 const response = await fetch('/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: username,
-                        password: password
+                        identity: identity,
+                        password: password,
+                        remember_me: rememberMe.checked
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    // 登录成功，跳转到主页
-                    window.location.href = '/';
+                    showMessage('登录成功，正在跳转...', 'success');
+                    setTimeout(() => { window.location.href = '/'; }, 1000);
                 } else {
-                    showError(result.message || '登录失败，请检查用户名和密码');
+                    // 检查是否锁定
+                    if (result.lockout_time) {
+                        lockoutMsg.textContent = result.message;
+                        lockoutMsg.style.display = 'block';
+                        submitBtn.disabled = true;
+                    } else {
+                        showMessage(result.message, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '登录';
+                    }
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                showError('网络错误，请稍后重试');
+                showMessage('网络错误，请稍后重试', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '登录';
             }
         });
-        
-        function showError(message) {
-            const errorMessage = document.getElementById('error-message');
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + type;
+            if (type === 'success') {
+                setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
+            }
         }
-        
-        // 页面加载时聚焦到用户名输入框
+
+        // 自动聚焦
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('username').focus();
+            identityInput.focus();
         });
     </script>
 </body>
