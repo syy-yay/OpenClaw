@@ -76,29 +76,36 @@ def create_app():
             data = request.get_json()
             username = data.get('username')
             password = data.get('password')
-            email = data.get('email', '')
+            email = data.get('email')
+            confirm_password = data.get('confirm_password', '')
             
-            # 输入验证
-            if not username or not password:
-                return jsonify({'success': False, 'message': '用户名和密码不能为空'})
+            # 必填字段校验
+            if not username or not password or not email:
+                return jsonify({'success': False, 'message': '用户名、密码和邮箱不能为空'}), 400
             
+            # 密码确认校验
+            if password != confirm_password:
+                return jsonify({'success': False, 'message': '两次输入的密码不一致'}), 400
+            
+            # 用户名长度
             if len(username) < 3 or len(username) > 20:
-                return jsonify({'success': False, 'message': '用户名长度必须在3-20个字符之间'})
+                return jsonify({'success': False, 'message': '用户名长度必须在3-20个字符之间'}), 400
             
+            # 密码强度
             if len(password) < 6:
-                return jsonify({'success': False, 'message': '密码长度至少6位'})
+                return jsonify({'success': False, 'message': '密码长度至少6位'}), 400
             
-            # 验证邮箱格式（如果提供了邮箱）
-            if email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-                return jsonify({'success': False, 'message': '邮箱格式不正确'})
+            # 邮箱格式
+            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+                return jsonify({'success': False, 'message': '邮箱格式不正确'}), 400
             
             # 检查用户名是否已存在
             if User.query.filter_by(username=username).first():
-                return jsonify({'success': False, 'message': '用户名已存在'})
+                return jsonify({'success': False, 'message': '用户名已存在'}), 400
             
-            # 检查邮箱是否已存在（如果提供了邮箱）
-            if email and User.query.filter_by(email=email).first():
-                return jsonify({'success': False, 'message': '邮箱已被使用'})
+            # 检查邮箱是否已存在
+            if User.query.filter_by(email=email).first():
+                return jsonify({'success': False, 'message': '邮箱已被使用'}), 400
             
             # 创建新用户
             try:
@@ -115,10 +122,10 @@ def create_app():
                         'username': new_user.username,
                         'email': new_user.email
                     }
-                })
+                }), 201
             except Exception as e:
                 db.session.rollback()
-                return jsonify({'success': False, 'message': '注册失败，请稍后重试'})
+                return jsonify({'success': False, 'message': '注册失败，请稍后重试'}), 500
         
         # GET请求返回注册页面
         if 'user_id' in session:
