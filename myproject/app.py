@@ -143,14 +143,17 @@ def create_app():
 
         # 创建默认管理员账户（仅在首次运行时）
         if not User.query.filter_by(username='admin').first():
-            admin_user = User(
-                username='admin',
-                email='admin@example.com',
-                role='admin'
-            )
-            admin_user.set_password('admin123')
-            db.session.add(admin_user)
-            db.session.commit()
+            try:
+                admin_user = User(
+                    username='admin',
+                    email='admin@example.com',
+                    role='admin'
+                )
+                admin_user.set_password('admin123')
+                db.session.add(admin_user)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
 
     # ==================== 页面路由 ====================
     @app.route('/')
@@ -191,9 +194,12 @@ def create_app():
                 # 登录成功：清除失败记录
                 rate_limiter.clear(identity)
 
-                # 更新最后登录时间
+                # 更新最后登录时间（忽略 StaleDataError，不影响登录）
                 user.last_login = datetime.utcnow()
-                db.session.commit()
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
                 # 记录成功登录
                 log_login_attempt(user=user, success=True, login_method='password')

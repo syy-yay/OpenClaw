@@ -105,13 +105,13 @@
             }
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        username,
+                        identity: username,
                         password
                     })
                 });
@@ -121,7 +121,7 @@
                     window.location.href = '/';
                 } else {
                     const data = await response.json();
-                    alert('登录失败：' + (data.error || '用户名或密码错误'));
+                    alert('登录失败：' + (data.message || '用户名或密码错误'));
                 }
             } catch (error) {
                 console.error('登录错误:', error);

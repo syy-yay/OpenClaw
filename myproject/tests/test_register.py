@@ -151,7 +151,7 @@ class TestRegisterAPI(unittest.TestCase):
     def test_register_page(self):
         rv = self.client.get('/register')
         self.assertEqual(rv.status_code, 200)
-        self.assertIn(b'register', rv.data.lower())
+        self.assertIn('注册'.encode('utf-8'), rv.data)
 
 
 if __name__ == '__main__':
