@@ -249,10 +249,10 @@
             }
         });
 
-        // 确认密码实时检查
+        // 确认密码实时检查（修复：trim 后再比较，避免尾部空格导致误判）
         confirmInput.addEventListener('input', function() {
-            const pw = passwordInput.value;
-            const cpw = this.value;
+            const pw = passwordInput.value.trim();
+            const cpw = this.value.trim();
             if (cpw.length === 0) {
                 confirmHint.textContent = '';
                 this.className = '';
@@ -271,8 +271,8 @@
 
             const username = usernameInput.value.trim();
             const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            const confirmPassword = confirmInput.value;
+            const password = passwordInput.value.trim();          // 修复1：trim 密码
+            const confirmPassword = confirmInput.value.trim();    // 修复2：trim 确认密码
 
             // 前端验证
             if (!username || !email || !password || !confirmPassword) {
@@ -296,7 +296,7 @@
                 return;
             }
 
-            if (password !== confirmPassword) {
+            if (password !== confirmPassword) {                   // 修复后：两个已 trim 的值做比较
                 showMessage('两次输入的密码不一致', 'error');
                 return;
             }
