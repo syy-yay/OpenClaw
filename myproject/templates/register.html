@@ -224,6 +224,24 @@
         const confirmHint = document.getElementById('confirmHint');
         const submitBtn = document.getElementById('submitBtn');
 
+        // 通用函数：检查确认密码是否匹配（trim 后比较）
+        function checkConfirmMatch() {
+            const pw = passwordInput.value.trim();
+            const cpw = confirmInput.value.trim();
+            if (cpw.length === 0) {
+                confirmHint.textContent = '';
+                confirmInput.className = '';
+                return;
+            }
+            if (pw === cpw) {
+                confirmHint.innerHTML = '<span class="success">密码一致 ✓</span>';
+                confirmInput.className = 'valid';
+            } else {
+                confirmHint.innerHTML = '<span class="error">密码不一致</span>';
+                confirmInput.className = 'invalid';
+            }
+        }
+
         // 密码强度检测
         passwordInput.addEventListener('input', function() {
             const pw = this.value;
@@ -247,23 +265,13 @@
                 strengthBar.classList.add('strong');
                 passwordHint.innerHTML = '<span class="success">密码强度：强 ✓</span>';
             }
+
+            // 密码变更时同步触发确认密码的实时校验
+            checkConfirmMatch();
         });
 
-        // 确认密码实时检查（修复：trim 后再比较，避免尾部空格导致误判）
-        confirmInput.addEventListener('input', function() {
-            const pw = passwordInput.value.trim();
-            const cpw = this.value.trim();
-            if (cpw.length === 0) {
-                confirmHint.textContent = '';
-                this.className = '';
-            } else if (pw === cpw) {
-                confirmHint.innerHTML = '<span class="success">密码一致 ✓</span>';
-                this.className = 'valid';
-            } else {
-                confirmHint.innerHTML = '<span class="error">密码不一致</span>';
-                this.className = 'invalid';
-            }
-        });
+        // 确认密码实时检查
+        confirmInput.addEventListener('input', checkConfirmMatch);
 
         // 提交表单
         form.addEventListener('submit', async function(e) {
@@ -271,8 +279,8 @@
 
             const username = usernameInput.value.trim();
             const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();          // 修复1：trim 密码
-            const confirmPassword = confirmInput.value.trim();    // 修复2：trim 确认密码
+            const password = passwordInput.value.trim();
+            const confirmPassword = confirmInput.value.trim();
 
             // 前端验证
             if (!username || !email || !password || !confirmPassword) {
@@ -296,7 +304,7 @@
                 return;
             }
 
-            if (password !== confirmPassword) {                   // 修复后：两个已 trim 的值做比较
+            if (password !== confirmPassword) {
                 showMessage('两次输入的密码不一致', 'error');
                 return;
             }
