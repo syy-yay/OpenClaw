@@ -2,7 +2,7 @@
 """团队任务管理系统 - 后端主程序"""
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from functools import wraps
-from models import db, Task, User, LoginLog
+from models import db, Task, User, LoginLog, Comment
 import os
 import time
 from datetime import datetime, timedelta
@@ -545,6 +545,61 @@ def create_app():
             }
         })
 
+
+
+    @app.route('/api/tasks/<int:task_id>/comments', methods=['GET'])
+    @login_required
+    def get_task_comments(task_id):
+        """获取任务的所有评论"""
+        task = Task.query.get_or_404(task_id)
+        comments = Comment.query.filter_by(task_id=task.id, is_deleted=False).order_by(Comment.created_at.asc()).all()
+        return jsonify([c.to_dict() for c in comments])
+
+    @app.route('/api/tasks/<int:task_id>/comments', methods=['POST'])
+    @login_required
+    def create_comment(task_id):
+        """发表评论"""
+        task = Task.query.get_or_404(task_id)
+        user = get_current_user()
+        data = request.get_json() or {}
+
+        content_text = (data.get('content') or '').strip()
+        if not content_text:
+            return jsonify({'error': '评论内容不能为空'}), 400
+
+        if len(content_text) > 5000:
+            return jsonify({'error': '评论内容不能超过5000字符'}), 400
+
+        comment = Comment(
+            task_id=task.id,
+            user_id=user.id,
+            content=content_text,
+        )
+        db.session.add(comment)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '评论发表成功',
+            'comment': comment.to_dict()
+        }), 201
+
+    @app.route('/api/comments/<int:comment_id>', methods=['DELETE'])
+    @login_required
+    def delete_comment(comment_id):
+        """删除评论（仅评论作者或管理员可删除）"""
+        comment = Comment.query.get_or_404(comment_id)
+        user = get_current_user()
+
+        if comment.user_id != user.id and not user.is_admin:
+            return jsonify({'error': '无权删除此评论'}), 403
+
+        # 软删除
+        comment.is_deleted = True
+        comment.content = ''
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': '评论已删除'})
     return app
 
 

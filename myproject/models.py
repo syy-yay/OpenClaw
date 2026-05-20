@@ -118,3 +118,35 @@ class LoginLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref=db.backref('login_logs', lazy=True))
+class Comment(db.Model):
+    """任务评论"""
+    __tablename__ = 'comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False)  # 软删除
+
+    task = db.relationship('Task', backref=db.backref('comments', lazy='dynamic', order_by='Comment.created_at'))
+    user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'user': {
+                'id': self.user.id,
+                'username': self.user.username,
+                'avatar_url': self.user.avatar_url,
+            },
+            'content': self.content if not self.is_deleted else '[评论已被删除]',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_deleted': self.is_deleted,
+        }
+
+    def __repr__(self):
+        return f'<Comment {self.id} on Task {self.task_id}>'
