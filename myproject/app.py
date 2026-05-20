@@ -154,9 +154,10 @@ def create_app():
 
     # ==================== 页面路由 ====================
     @app.route('/')
-    @login_required
     def index():
-        return render_template('index.html')
+        # 首页对所有人开放，但根据登录状态显示不同内容
+        user = get_current_user()
+        return render_template('index.html', user=user)
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -311,7 +312,7 @@ def create_app():
         session.pop('user_role', None)
         session.pop('login_time', None)
         session.pop('login_ip', None)
-        return redirect(url_for('login'))
+        return redirect(url_for('index'))
 
     # ==================== OAuth 路由 ====================
     @app.route('/auth/<provider>')
@@ -472,4 +473,4 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

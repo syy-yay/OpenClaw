@@ -138,12 +138,54 @@
             background-color: rgba(255, 255, 255, 0.2);
         }
         
+        .hero-section {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: #6c757d;
+            margin-bottom: 2rem;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+            height: 100%;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
         @media (max-width: 768px) {
             .header-section {
                 padding: 1.5rem 0;
             }
             .stat-number {
                 font-size: 2rem;
+            }
+            .hero-title {
+                font-size: 2rem;
+            }
+            .hero-subtitle {
+                font-size: 1rem;
             }
         }
     </style>
@@ -159,13 +201,18 @@
                 </div>
                 <div class="col-md-4 text-md-end">
                     <div class="d-flex justify-content-md-end align-items-center gap-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-user-circle me-2 text-white"></i>
-                            <span class="text-white" id="current-username">用户</span>
-                        </div>
-                        <button class="logout-btn" id="logout-btn" title="退出登录">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
+                        {% if user %}
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-circle me-2 text-white"></i>
+                                <span class="text-white" id="current-username">{{ user.username }}</span>
+                            </div>
+                            <button class="logout-btn" id="logout-btn" title="退出登录">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        {% else %}
+                            <a href="/login" class="btn btn-light">登录</a>
+                            <a href="/register" class="btn btn-outline-light">注册</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -173,103 +220,151 @@
     </header>
 
     <div class="container mt-4 mb-5">
-        <!-- 统计卡片区域 -->
-        <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
-                    <div class="stat-number" id="total-tasks">0</div>
-                    <div class="stat-label">总任务数</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
-                    <div class="stat-number text-success" id="completed-tasks">0</div>
-                    <div class="stat-label">已完成</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
-                    <div class="stat-number text-warning" id="in-progress-tasks">0</div>
-                    <div class="stat-label">进行中</div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
-                    <div class="stat-number text-danger" id="pending-tasks">0</div>
-                    <div class="stat-label">待处理</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 创建任务表单 -->
-        <div class="card mb-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>创建新任务</h5>
-                <button class="btn btn-sm btn-outline-primary" id="toggle-form">
-                    <i class="fas fa-chevron-up me-1"></i>收起
-                </button>
-            </div>
-            <div class="card-body" id="create-form">
-                <form id="task-form">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="task-title" class="form-label">任务标题 *</label>
-                            <input type="text" class="form-control" id="task-title" placeholder="请输入任务标题" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="task-assignee" class="form-label">负责人</label>
-                            <input type="text" class="form-control" id="task-assignee" placeholder="请输入负责人姓名">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="task-status" class="form-label">状态</label>
-                            <select class="form-select" id="task-status">
-                                <option value="pending">待处理</option>
-                                <option value="in-progress">进行中</option>
-                                <option value="completed">已完成</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label for="task-description" class="form-label">任务描述</label>
-                            <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>保存任务
-                            </button>
-                            <button type="button" class="btn btn-secondary ms-2" id="reset-form">
-                                <i class="fas fa-undo me-2"></i>重置表单
-                            </button>
-                        </div>
+        {% if user %}
+            <!-- 统计卡片区域 -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card bg-white">
+                        <div class="stat-number" id="total-tasks">0</div>
+                        <div class="stat-label">总任务数</div>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- 任务列表 -->
-        <div class="card">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>任务列表</h5>
-                <div class="text-muted small">
-                    <i class="fas fa-info-circle me-1"></i> 共 <span id="task-count">0</span> 个任务
                 </div>
-            </div>
-            <div class="card-body">
-                <div id="tasks-container">
-                    <!-- 任务将通过JavaScript动态加载 -->
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">加载中...</span>
-                        </div>
-                        <p class="text-muted">正在加载任务列表...</p>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card bg-white">
+                        <div class="stat-number text-success" id="completed-tasks">0</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card bg-white">
+                        <div class="stat-number text-warning" id="in-progress-tasks">0</div>
+                        <div class="stat-label">进行中</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card bg-white">
+                        <div class="stat-number text-danger" id="pending-tasks">0</div>
+                        <div class="stat-label">待处理</div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- 创建任务表单 -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>创建新任务</h5>
+                    <button class="btn btn-sm btn-outline-primary" id="toggle-form">
+                        <i class="fas fa-chevron-up me-1"></i>收起
+                    </button>
+                </div>
+                <div class="card-body" id="create-form">
+                    <form id="task-form">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="task-title" class="form-label">任务标题 *</label>
+                                <input type="text" class="form-control" id="task-title" placeholder="请输入任务标题" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="task-assignee" class="form-label">负责人</label>
+                                <input type="text" class="form-control" id="task-assignee" placeholder="请输入负责人姓名">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="task-status" class="form-label">状态</label>
+                                <select class="form-select" id="task-status">
+                                    <option value="pending">待处理</option>
+                                    <option value="in-progress">进行中</option>
+                                    <option value="completed">已完成</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="task-description" class="form-label">任务描述</label>
+                                <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>保存任务
+                                </button>
+                                <button type="button" class="btn btn-secondary ms-2" id="reset-form">
+                                    <i class="fas fa-undo me-2"></i>重置表单
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 任务列表 -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>任务列表</h5>
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i> 共 <span id="task-count">0</span> 个任务
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="tasks-container">
+                        <!-- 任务将通过JavaScript动态加载 -->
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="text-muted">正在加载任务列表...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- 未登录用户的首页内容 -->
+            <div class="hero-section">
+                <h2 class="hero-title">提升团队协作效率</h2>
+                <p class="hero-subtitle">简单易用的任务管理系统，帮助您的团队更好地规划、跟踪和完成工作</p>
+                <div class="cta-buttons">
+                    <a href="/register" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>免费注册
+                    </a>
+                    <a href="/login" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>立即登录
+                    </a>
+                </div>
+            </div>
+
+            <!-- 功能特性 -->
+            <div class="row mt-5">
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <h4>任务管理</h4>
+                        <p class="text-muted">创建、分配和跟踪任务进度，确保项目按时完成</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h4>团队协作</h4>
+                        <p class="text-muted">多人协作，实时同步任务状态，提高工作效率</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h4>进度追踪</h4>
+                        <p class="text-muted">可视化进度展示，清晰了解项目完成情况</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        {% if user %}
         // 全局变量
         let tasks = [];
 
@@ -287,39 +382,14 @@
         const currentUsernameEl = document.getElementById('current-username');
         const logoutBtn = document.getElementById('logout-btn');
 
-        // 检查会话状态
-        async function checkSession() {
-            try {
-                const response = await fetch('/api/check-session');
-                if (response.status === 401) {
-                    // 会话无效，重定向到登录页
-                    window.location.href = '/login';
-                    return false;
-                }
-                
-                const result = await response.json();
-                if (result.authenticated && result.user) {
-                    currentUsernameEl.textContent = result.user.username;
-                    return true;
-                } else {
-                    window.location.href = '/login';
-                    return false;
-                }
-            } catch (error) {
-                console.error('Session check failed:', error);
-                window.location.href = '/login';
-                return false;
-            }
-        }
-
         // 登出功能
         logoutBtn.addEventListener('click', async function() {
             try {
                 await fetch('/logout');
-                window.location.href = '/login';
+                window.location.href = '/';
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = '/login';
+                window.location.href = '/';
             }
         });
 
@@ -651,10 +721,6 @@
 
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', async function() {
-            // 检查会话状态
-            const sessionValid = await checkSession();
-            if (!sessionValid) return;
-            
             // 初始化表单
             document.getElementById('task-title').focus();
             
@@ -664,6 +730,7 @@
             // 设置定时刷新（每30秒）
             setInterval(fetchTasks, 30000);
         });
+        {% endif %}
     </script>
 </body>
 </html>
