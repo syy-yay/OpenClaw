@@ -285,6 +285,12 @@ def create_app():
                 new_user.set_password(password)
                 db.session.add(new_user)
                 db.session.commit()
+                # 注册成功后自动登录（commit 之后 new_user.id 才生效）
+                session["user_id"] = new_user.id
+                session["username"] = new_user.username
+                session["user_role"] = new_user.role
+                session["login_time"] = datetime.utcnow().isoformat()
+                session["login_ip"] = request.remote_addr
 
                 return jsonify({
                     'success': True,

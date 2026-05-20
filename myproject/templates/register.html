@@ -324,7 +324,7 @@
 
                 if (result.success) {
                     showMessage(result.message, 'success');
-                    setTimeout(() => { window.location.href = '/login'; }, 1500);
+                    setTimeout(() => { window.location.href = '/'; }, 1000);
                 } else {
                     showMessage(result.message, 'error');
                     submitBtn.disabled = false;

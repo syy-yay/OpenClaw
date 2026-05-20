@@ -39,6 +39,24 @@ class TestRegisterAPI(unittest.TestCase):
             self.assertTrue(data['success'])
             self.assertEqual(data['user']['username'], 'testuser')
 
+    def test_register_auto_login(self):
+        """注册成功后应自动登录，session 中包含用户信息"""
+        with self.app.app_context():
+            rv = self.client.post('/register', json={
+                'username': 'autologin',
+                'email': 'autologin@example.com',
+                'password': 'Pass123456',
+                'confirm_password': 'Pass123456',
+            })
+            self.assertTrue(rv.get_json()['success'])
+
+            # 验证 session —— 应已自动登录
+            rv2 = self.client.get('/api/check-session')
+            data = rv2.get_json()
+            self.assertTrue(data['authenticated'])
+            self.assertEqual(data['user']['username'], 'autologin')
+            self.assertIsNotNone(data['user']['id'])
+
     # ---- 参数缺失 ----
     def test_register_missing_username(self):
         with self.app.app_context():
