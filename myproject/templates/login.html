@@ -125,10 +125,10 @@
             loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>登录中…';
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ identity: username, password })
                 });
 
                 // 登录成功 —— 后端会设置 session cookie，直接跳转首页

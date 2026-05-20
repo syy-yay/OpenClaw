@@ -123,19 +123,22 @@ def create_app():
     # ==================== 登录日志 ====================
     def log_login_attempt(user=None, username_attempted=None, success=False, 
                          failure_reason=None, login_method='password'):
-        """记录登录尝试"""
-        log = LoginLog(
-            user_id=user.id if user else None,
-            username_attempted=username_attempted,
-            ip_address=request.remote_addr or 'unknown',
-            user_agent=request.headers.get('User-Agent', '')[:500],
-            success=success,
-            failure_reason=failure_reason,
-            login_method=login_method,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(log)
-        db.session.commit()
+        """记录登录尝试（不会因日志写入失败而影响登录流程）"""
+        try:
+            log = LoginLog(
+                user_id=user.id if user else None,
+                username_attempted=username_attempted,
+                ip_address=request.remote_addr or 'unknown',
+                user_agent=request.headers.get('User-Agent', '')[:500],
+                success=success,
+                failure_reason=failure_reason,
+                login_method=login_method,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # ==================== 数据库初始化 ====================
     with app.app_context():
@@ -194,12 +197,12 @@ def create_app():
                 # 登录成功：清除失败记录
                 rate_limiter.clear(identity)
 
-                # 更新最后登录时间（忽略 StaleDataError，不影响登录）
+                # 更新最后登录时间（失败不影响登录）
                 user.last_login = datetime.utcnow()
                 try:
-                    db.session.commit()
+                    db.session.flush()
                 except Exception:
-                    db.session.rollback()
+                    pass
 
                 # 记录成功登录
                 log_login_attempt(user=user, success=True, login_method='password')
