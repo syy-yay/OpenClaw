@@ -12,6 +12,6 @@ RUN pip3 install flask flask-sqlalchemy --break-system-packages 2>/dev/null || \
     pip3 install flask flask-sqlalchemy
 
 # 暴露端口
-EXPOSE 5000
+EXPOSE 5001
 
 CMD ["python3", "app.py"]
