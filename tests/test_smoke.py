@@ -11,8 +11,8 @@ def get_tag():
 def staging():
     tag = get_tag()
     subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True)
-    # 容器内 Flask 运行在 port 5001，映射到宿主机 port 18080
-    subprocess.run(["docker", "run", "-d", "--name", CONTAINER_NAME, "-p", f"{STAGING_PORT}:5001", f"192.168.1.200:5000/openclaw/myapp:{tag}"], check=True)
+    # 容器内 Flask 运行在 port 5000，映射到宿主机 port 18080
+    subprocess.run(["docker", "run", "-d", "--name", CONTAINER_NAME, "-p", f"{STAGING_PORT}:5000", f"192.168.1.200:5000/openclaw/myapp:{tag}"], check=True)
     time.sleep(3)
     yield
     subprocess.run(["docker", "rm", "-f", CONTAINER_NAME], capture_output=True)
