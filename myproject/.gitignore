@@ -3,3 +3,7 @@ __pycache__/
 instance/
 .env
 *.db
+static/avatars/*.png
+static/avatars/*.jpg
+static/avatars/*.gif
+static/avatars/*.webp

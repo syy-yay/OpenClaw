@@ -352,18 +352,36 @@ def create_app():
     @app.route('/api/profile', methods=['GET', 'PUT'])
     @login_required
     def profile():
-        """查看/更新个人资料"""
+        """查看/更新个人资料（用户名、邮箱、手机号、头像、密码）"""
         user = get_current_user()
         if request.method == 'PUT':
             data = request.get_json() or {}
+
+            # ---- 修改用户名 ----
+            if 'username' in data:
+                new_username = data['username'].strip()
+                if len(new_username) < 3 or len(new_username) > 20:
+                    return jsonify({'success': False, 'message': '用户名长度必须在3-20个字符之间'}), 400
+                existing = User.query.filter(User.username == new_username, User.id != user.id).first()
+                if existing:
+                    return jsonify({'success': False, 'message': '用户名已被使用'}), 400
+                user.username = new_username
+                # 同步更新 session 中的用户名
+                session['username'] = new_username
+
+            # ---- 修改邮箱 ----
             if 'email' in data:
                 email = data['email'].strip().lower()
-                if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-                    existing = User.query.filter(User.email == email, User.id != user.id).first()
-                    if existing:
-                        return jsonify({'success': False, 'message': '邮箱已被使用'}), 400
-                    user.email = email
+                if email == '':
+                    return jsonify({'success': False, 'message': '邮箱不能为空'}), 400
+                if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+                    return jsonify({'success': False, 'message': '邮箱格式不正确'}), 400
+                existing = User.query.filter(User.email == email, User.id != user.id).first()
+                if existing:
+                    return jsonify({'success': False, 'message': '邮箱已被使用'}), 400
+                user.email = email
 
+            # ---- 修改手机号 ----
             if 'phone' in data:
                 phone = data['phone'].strip()
                 if phone and not re.match(r'^1[3-9]\d{9}$', phone):
@@ -373,7 +391,17 @@ def create_app():
                     if existing:
                         return jsonify({'success': False, 'message': '手机号已被使用'}), 400
                     user.phone = phone
+                else:
+                    user.phone = None  # 允许清空手机号
 
+            # ---- 修改头像URL ----
+            if 'avatar_url' in data:
+                avatar_url = data['avatar_url'].strip()
+                if avatar_url and not (avatar_url.startswith('http://') or avatar_url.startswith('https://') or avatar_url.startswith('/')):
+                    return jsonify({'success': False, 'message': '头像URL格式不正确'}), 400
+                user.avatar_url = avatar_url if avatar_url else None
+
+            # ---- 修改密码 ----
             if 'password' in data and data['password']:
                 if len(data['password']) < 6:
                     return jsonify({'success': False, 'message': '密码长度至少6位'}), 400
@@ -382,7 +410,56 @@ def create_app():
             db.session.commit()
             return jsonify({'success': True, 'user': user.to_dict(full=True)})
 
+        # GET —— 返回完整用户信息
         return jsonify({'success': True, 'user': user.to_dict(full=True)})
+
+    @app.route('/api/profile/avatar', methods=['POST'])
+    @login_required
+    def upload_avatar():
+        """上传头像文件"""
+        user = get_current_user()
+
+        if 'avatar' not in request.files:
+            return jsonify({'success': False, 'message': '未选择头像文件'}), 400
+
+        file = request.files['avatar']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '未选择头像文件'}), 400
+
+        # 校验文件类型
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in allowed_extensions:
+            return jsonify({
+                'success': False,
+                'message': f'不支持的图片格式，仅支持: {", ".join(allowed_extensions)}'
+            }), 400
+
+        # 校验文件大小（最大 5MB）
+        file_size = len(file.read())
+        file.seek(0)
+        if file_size > 5 * 1024 * 1024:
+            return jsonify({'success': False, 'message': '头像文件大小不能超过5MB'}), 400
+
+        # 生成文件路径
+        upload_dir = os.path.join(app.root_path, 'static', 'avatars')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        safe_filename = f'user_{user.id}_{int(time.time())}.{ext}'
+        file_path = os.path.join(upload_dir, safe_filename)
+        file.save(file_path)
+
+        # 更新用户头像 URL
+        avatar_url = f'/static/avatars/{safe_filename}'
+        user.avatar_url = avatar_url
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': '头像上传成功',
+            'avatar_url': avatar_url,
+            'user': user.to_dict(full=True)
+        })
 
     @app.route('/api/users', methods=['GET'])
     @admin_required
