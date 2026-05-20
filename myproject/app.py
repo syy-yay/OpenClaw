@@ -234,9 +234,9 @@ def create_app():
         if request.method == 'POST':
             data = request.get_json() or {}
             username = (data.get('username') or '').strip()
-            password = data.get('password', '')
+            password = (data.get('password') or '').strip()
             email = (data.get('email') or '').strip().lower()
-            confirm_password = data.get('confirm_password', '')
+            confirm_password = (data.get('confirm_password') or data.get('confirmPassword') or '').strip()
             phone = (data.get('phone') or '').strip()
 
             # 必填字段
