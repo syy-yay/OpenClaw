@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - 团队任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --primary-dark: #2c3e50;
+            --success: #28a745;
+            --danger: #dc3545;
+            --light-bg: #f5f7fa;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            padding: 2rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .card-header {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            cursor: pointer;
+        }
+
+        .avatar-wrapper img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: filter 0.3s;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .avatar-wrapper:hover .avatar-overlay { opacity: 1; }
+        .avatar-wrapper:hover img { filter: brightness(0.7); }
+
+        .form-label { font-weight: 500; color: #444; }
+
+        .form-control {
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 0.6rem 1rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74,111,165,0.2);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+        }
+        .btn-primary:hover { background: #3a5a80; }
+
+        .btn-outline-secondary {
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #888; font-weight: 500; }
+        .info-value { color: #333; font-weight: 600; }
+
+        .toast-container { z-index: 1055; }
+
+        .password-section {
+            border-top: 1px solid #eee;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+        }
+
+        .spinner-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .spinner-overlay.active { display: flex; }
+
+        @media (max-width: 768px) {
+            .page-header { padding: 1.5rem 0; }
+            .avatar-wrapper { width: 100px; height: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 全屏加载遮罩 -->
+    <div class="spinner-overlay" id="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width:3rem;height:3rem;" role="status"></div>
+            <p class="mt-2 text-muted">加载中...</p>
+        </div>
+    </div>
+
+    <!-- 页面头部 -->
+    <header class="page-header">
+        <div class="container">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-user-circle me-2"></i>个人资料</h1>
+                    <p class="mb-0 opacity-75">管理您的账户信息和个人设置</p>
+                </div>
+                <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
+                    <i class="fas fa-arrow-left me-1"></i>返回首页
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container my-4">
+
+        <div class="row g-4">
+
+            <!-- ======= 左侧：头像 + 摘要 ======= -->
+            <div class="col-lg-4">
+                <div class="card text-center p-4">
+                    <!-- 头像 -->
+                    <div class="avatar-wrapper" id="avatar-upload-trigger" title="点击更换头像">
+                        <img id="avatar-img" src="/static/img/default-avatar.png" alt="头像">
+                        <div class="avatar-overlay"><i class="fas fa-camera"></i></div>
+                    </div>
+                    <input type="file" id="avatar-file-input" accept="image/png,image/jpg,image/jpeg,image/gif,image/webp" style="display:none;">
+
+                    <h5 class="mt-3 mb-1" id="display-username">-</h5>
+                    <span class="badge bg-primary rounded-pill" id="display-role">-</span>
+
+                    <hr>
+
+                    <div class="info-row">
+                        <span class="info-label"><i class="far fa-envelope me-1"></i>邮箱</span>
+                        <span class="info-value" id="display-email">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-phone me-1"></i>电话</span>
+                        <span class="info-value" id="display-phone">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="far fa-calendar-alt me-1"></i>注册时间</span>
+                        <span class="info-value" id="display-created">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-sign-in-alt me-1"></i>上次登录</span>
+                        <span class="info-value" id="display-last-login">-</span>
+                    </div>
+                </div>
+
+                <!-- 退出登录按钮 -->
+                <div class="card mt-3 p-3 text-center">
+                    <button class="btn btn-outline-danger w-100" id="logout-btn">
+                        <i class="fas fa-sign-out-alt me-2"></i>退出登录
+                    </button>
+                </div>
+            </div>
+
+            <!-- ======= 右侧：编辑表单 ======= -->
+            <div class="col-lg-8">
+
+                <!-- 基本信息编辑 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-edit me-2 text-primary"></i>编辑基本信息
+                    </div>
+                    <div class="card-body">
+                        <form id="profile-form">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-username">用户名 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="input-username" minlength="3" maxlength="20" required>
+                                    <div class="form-text">3~20 个字符</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-email">邮箱 <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="input-email" required>
+                                    <div class="form-text">用于接收通知和找回密码</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-phone">手机号</label>
+                                    <input type="tel" class="form-control" id="input-phone" pattern="\d{11}" maxlength="11" placeholder="11 位手机号">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-avatar-url">头像链接（URL）</label>
+                                    <input type="url" class="form-control" id="input-avatar-url" placeholder="https://example.com/avatar.png">
+                                    <div class="form-text">也可通过上方头像上传</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="fas fa-save me-2"></i>保存修改
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary px-4" id="reset-edit-btn">
+                                    <i class="fas fa-undo me-2"></i>重置
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- 密码修改（仅在同一表单内） -->
+                        <div class="password-section">
+                            <h6 class="mb-3"><i class="fas fa-lock me-2 text-warning"></i>修改密码</h6>
+                            <p class="text-muted small mb-3">如无需修改密码，请留空以下字段</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-new-password">新密码</label>
+                                    <input type="password" class="form-control" id="input-new-password" minlength="6" placeholder="至少 6 位">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="input-confirm-password">确认新密码</label>
+                                    <input type="password" class="form-control" id="input-confirm-password" placeholder="再次输入新密码">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作日志（轻量占位） -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-history me-2 text-secondary"></i>最近活动
+                    </div>
+                    <div class="card-body text-center py-4 text-muted">
+                        <i class="fas fa-code-branch fa-2x mb-2"></i>
+                        <p class="mb-0 small">活动日志功能即将上线</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================================
+        //  全局状态
+        // ============================================================
+        let userData = null;
+
+        // DOM 引用
+        const $ = id => document.getElementById(id);
+        const overlay = $('loading-overlay');
+        const avatarImg = $('avatar-img');
+        const avatarInput = $('avatar-file-input');
+
+        // ============================================================
+        //  Toast 通知
+        // ============================================================
+        function showToast(message, type = 'success') {
+            const container = document.querySelector('.toast-container');
+            const colors = { success: 'bg-success', error: 'bg-danger', warning: 'bg-warning text-dark', info: 'bg-primary' };
+            const bg = colors[type] || colors.info;
+
+            const el = document.createElement('div');
+            el.className = `toast ${bg} text-white align-items-center`;
+            el.role = 'alert';
+            el.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>`;
+            container.appendChild(el);
+            new bootstrap.Toast(el, { delay: 3000 }).show();
+            el.addEventListener('hidden.bs.toast', () => el.remove());
+        }
+
+        // ============================================================
+        //  数据加载
+        // ============================================================
+        async function loadProfile() {
+            overlay.classList.add('active');
+            try {
+                const res = await fetch('/api/profile');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '获取资料失败');
+                userData = data.user;
+                renderProfile(userData);
+            } catch (err) {
+                console.error(err);
+                showToast('加载个人资料失败：' + err.message, 'error');
+                if (err.message.includes('401') || err.message.includes('403')) {
+                    window.location.href = '/login.html';
+                }
+            } finally {
+                overlay.classList.remove('active');
+            }
+        }
+
+        function renderProfile(user) {
+            // 左侧摘要
+            avatarImg.src = user.avatar_url || '/static/img/default-avatar.png';
+            $('display-username').textContent = user.username;
+            $('display-role').textContent = user.role === 'admin' ? '管理员' : '成员';
+            $('display-email').textContent = user.email || '-';
+            $('display-phone').textContent = user.phone || '-';
+            $('display-created').textContent = user.created_at
+                ? new Date(user.created_at).toLocaleDateString('zh-CN')
+                : '-';
+            $('display-last-login').textContent = user.last_login
+                ? new Date(user.last_login).toLocaleString('zh-CN')
+                : '首次登录';
+
+            // 右侧表单
+            $('input-username').value = user.username || '';
+            $('input-email').value = user.email || '';
+            $('input-phone').value = user.phone || '';
+            $('input-avatar-url').value = user.avatar_url || '';
+        }
+
+        // ============================================================
+        //  头像上传
+        // ============================================================
+        $('avatar-upload-trigger').addEventListener('click', () => avatarInput.click());
+
+        avatarInput.addEventListener('change', async function() {
+            const file = this.files[0];
+            if (!file) return;
+
+            // 格式验证
+            const allowed = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif', 'image/webp'];
+            if (!allowed.includes(file.type)) {
+                showToast('不支持的文件格式，支持：PNG, JPG, GIF, WebP', 'error');
+                this.value = '';
+                return;
+            }
+            // 大小验证
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('文件大小超过 5MB 限制', 'error');
+                this.value = '';
+                return;
+            }
+
+            // 本地预览
+            const reader = new FileReader();
+            reader.onload = e => { avatarImg.src = e.target.result; };
+            reader.readAsDataURL(file);
+
+            // 上传
+            const fd = new FormData();
+            fd.append('avatar', file);
+
+            try {
+                const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd });
+                if (!res.ok) throw new Error('上传失败');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '上传失败');
+                userData = data.user;
+                avatarImg.src = data.avatar_url;
+                $('input-avatar-url').value = data.avatar_url || '';
+                showToast('头像更新成功！');
+            } catch (err) {
+                console.error(err);
+                // 回滚预览
+                avatarImg.src = userData.avatar_url || '/static/img/default-avatar.png';
+                showToast('头像上传失败：' + err.message, 'error');
+            }
+            this.value = '';
+        });
+
+        // ============================================================
+        //  保存资料（基本信息 + 密码）
+        // ============================================================
+        $('profile-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = $('input-username').value.trim();
+            const email = $('input-email').value.trim();
+            const phone = $('input-phone').value.trim();
+            const avatar_url = $('input-avatar-url').value.trim();
+            const password = $('input-new-password').value;
+            const confirmPwd = $('input-confirm-password').value;
+
+            // 基础校验
+            if (username.length < 3 || username.length > 20) {
+                showToast('用户名长度需在 3~20 个字符之间', 'error');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showToast('请输入有效的邮箱地址', 'error');
+                return;
+            }
+            if (phone && !/^\d{11}$/.test(phone)) {
+                showToast('手机号必须为 11 位数字', 'error');
+                return;
+            }
+            if (password && password.length < 6) {
+                showToast('密码至少需要 6 位', 'error');
+                return;
+            }
+            if (password !== confirmPwd) {
+                showToast('两次输入的密码不一致', 'error');
+                return;
+            }
+
+            // 构造 body
+            const body = { username, email };
+            if (phone) body.phone = phone;
+            if (avatar_url) body.avatar_url = avatar_url;
+            if (password) body.password = password;
+
+            try {
+                const res = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '保存失败');
+                userData = data.user;
+                renderProfile(userData);
+                // 清空密码字段
+                $('input-new-password').value = '';
+                $('input-confirm-password').value = '';
+                showToast('个人资料更新成功！');
+            } catch (err) {
+                console.error(err);
+                showToast('保存失败：' + err.message, 'error');
+            }
+        });
+
+        // 重置编辑表单
+        $('reset-edit-btn').addEventListener('click', () => {
+            if (userData) renderProfile(userData);
+            $('input-new-password').value = '';
+            $('input-confirm-password').value = '';
+        });
+
+        // ============================================================
+        //  退出登录
+        // ============================================================
+        $('logout-btn').addEventListener('click', async function() {
+            if (!confirm('确定要退出登录吗？')) return;
+            try {
+                const res = await fetch('/api/logout', { method: 'POST' });
+                if (res.ok) {
+                    showToast('已退出登录');
+                    setTimeout(() => { window.location.href = '/login.html'; }, 800);
+                } else {
+                    throw new Error('退出失败');
+                }
+            } catch (err) {
+                showToast('退出失败：' + err.message, 'error');
+            }
+        });
+
+        // ============================================================
+        //  初始化
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+
+</body>
+</html>
