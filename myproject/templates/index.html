@@ -276,6 +276,14 @@
                                     <option value="completed">已完成</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <label for="task-priority" class="form-label">优先级</label>
+                                <select class="form-select" id="task-priority">
+                                    <option value="high">高</option>
+                                    <option value="medium" selected>中</option>
+                                    <option value="low">低</option>
+                                </select>
+                            </div>
                             <div class="col-12">
                                 <label for="task-description" class="form-label">任务描述</label>
                                 <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
@@ -416,7 +424,8 @@
                 title: document.getElementById('task-title').value.trim(),
                 description: document.getElementById('task-description').value.trim(),
                 assignee: document.getElementById('task-assignee').value.trim(),
-                status: document.getElementById('task-status').value
+                status: document.getElementById('task-status').value,
+                priority: document.getElementById('task-priority').value
             };
 
             if (!formData.title) {
@@ -510,6 +519,7 @@
                                             <i class="fas fa-${task.status === 'completed' ? 'check-circle' : task.status === 'in-progress' ? 'sync-alt' : 'clock'} me-1"></i>
                                             ${task.status === 'completed' ? '已完成' : task.status === 'in-progress' ? '进行中' : '待处理'}
                                         </span>
+                                        ${task.priority ? `<span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'secondary'} ms-1">${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}</span>` : ''}
                                     </div>
                                 </div>
                                 <div class="text-end">
@@ -584,6 +594,7 @@
             document.getElementById('task-description').value = task.description || '';
             document.getElementById('task-assignee').value = task.assignee || '';
             document.getElementById('task-status').value = task.status;
+            document.getElementById('task-priority').value = task.priority || 'medium';
             
             // 滚动到表单
             createForm.scrollIntoView({ behavior: 'smooth' });
@@ -596,7 +607,8 @@
                     title: document.getElementById('task-title').value.trim(),
                     description: document.getElementById('task-description').value.trim(),
                     assignee: document.getElementById('task-assignee').value.trim(),
-                    status: document.getElementById('task-status').value
+                    status: document.getElementById('task-status').value,
+                    priority: document.getElementById('task-priority').value,
                 };
 
                 if (!formData.title) {

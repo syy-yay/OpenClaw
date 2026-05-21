@@ -486,15 +486,18 @@ def create_app():
     @app.route('/api/tasks', methods=['GET'])
     @login_required
     def get_tasks():
+        # 支持可选排序参数: ?sort=priority&order=asc (默认 priority 降序: high→medium→low)
+        sort_by = request.args.get('sort', 'priority')
+        order = request.args.get('order', 'desc')
+
         tasks = Task.query.all()
-        return jsonify([{
-            'id': task.id,
-            'title': task.title,
-            'description': task.description,
-            'assignee': task.assignee,
-            'status': task.status,
-            'created_at': task.created_at.isoformat()
-        } for task in tasks])
+        # 按优先级排序（high=0, medium=1, low=2）
+        if sort_by == 'priority':
+            tasks.sort(key=lambda t: t.priority_order)
+            if order == 'desc':
+                tasks.reverse()
+
+        return jsonify([t.to_dict() for t in tasks])
 
     @app.route('/api/tasks', methods=['POST'])
     @role_required('admin', 'user')
@@ -503,23 +506,21 @@ def create_app():
         if not data or 'title' not in data:
             return jsonify({'error': '标题不能为空'}), 400
 
+        priority = data.get('priority', 'medium')
+        if priority not in ('high', 'medium', 'low'):
+            return jsonify({'error': '优先级无效（high/medium/low）'}), 400
+
         task = Task(
             title=data['title'],
             description=data.get('description', ''),
             assignee=data.get('assignee', ''),
-            status=data.get('status', 'pending')
+            status=data.get('status', 'pending'),
+            priority=priority,
         )
         db.session.add(task)
         db.session.commit()
 
-        return jsonify({
-            'id': task.id,
-            'title': task.title,
-            'description': task.description,
-            'assignee': task.assignee,
-            'status': task.status,
-            'created_at': task.created_at.isoformat()
-        }), 201
+        return jsonify(task.to_dict()), 201
 
     @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
     @login_required
@@ -532,16 +533,14 @@ def create_app():
         task.assignee = data.get('assignee', task.assignee)
         task.status = data.get('status', task.status)
 
+        if 'priority' in data:
+            if data['priority'] not in ('high', 'medium', 'low'):
+                return jsonify({'error': '优先级无效（high/medium/low）'}), 400
+            task.priority = data['priority']
+
         db.session.commit()
 
-        return jsonify({
-            'id': task.id,
-            'title': task.title,
-            'description': task.description,
-            'assignee': task.assignee,
-            'status': task.status,
-            'created_at': task.created_at.isoformat()
-        })
+        return jsonify(task.to_dict())
 
     @app.route('/api/tasks/<int:task_id>/progress', methods=['GET'])
     @login_required
@@ -553,6 +552,7 @@ def create_app():
         return jsonify({
             'task_id': task.id,
             'status': task.status,
+            'task': task.to_dict(),
             'progress': {
                 'total': total_tasks,
                 'completed': completed_tasks,

@@ -9,16 +9,36 @@ db = SQLAlchemy()
 class Task(db.Model):
     __tablename__ = 'tasks'
 
+    PRIORITY_MAP = {'high': 2, 'medium': 1, 'low': 0}
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, default='')
     assignee = db.Column(db.String(50), default='')
     status = db.Column(db.String(20), default='pending')
+    priority = db.Column(db.String(10), default='medium')  # high, medium, low
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    @property
+    def priority_order(self):
+        return self.PRIORITY_MAP.get(self.priority, 99)
+
     def __repr__(self):
-        return f'<Task {self.id}: {self.title}>'
+        return f'<Task {self.id}: {self.title} [{self.priority}]>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'assignee': self.assignee,
+            'status': self.status,
+            'priority': self.priority,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 
 class User(db.Model):
