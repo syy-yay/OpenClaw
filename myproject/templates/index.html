@@ -52,6 +52,20 @@
         .status-pending { background-color: #fff3cd; color: #856404; }
         .status-in-progress { background-color: #d1ecf1; color: #0c5460; }
         .status-completed { background-color: #d4edda; color: #155724; }
+
+        /* 优先级徽章 */
+        .priority-badge {
+            padding: 0.35rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .priority-high { background-color: #fce4ec; color: #c62828; }
+        .priority-medium { background-color: #fff8e1; color: #f57f17; }
+        .priority-low { background-color: #e8f5e9; color: #2e7d32; }
         
         .task-card {
             margin-bottom: 1.5rem;
@@ -98,7 +112,7 @@
             gap: 0.5rem;
         }
         
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25);
         }
@@ -173,6 +187,26 @@
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
+
+        /* 过滤栏 */
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .filter-btn {
+            border-radius: 20px;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.9rem;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .filter-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
         
         @media (max-width: 768px) {
             .header-section {
@@ -260,28 +294,28 @@
                 <div class="card-body" id="create-form">
                     <form id="task-form">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="task-title" class="form-label">任务标题 *</label>
                                 <input type="text" class="form-control" id="task-title" placeholder="请输入任务标题" required>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label for="task-assignee" class="form-label">负责人</label>
                                 <input type="text" class="form-control" id="task-assignee" placeholder="请输入负责人姓名">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
+                                <label for="task-priority" class="form-label">优先级</label>
+                                <select class="form-select" id="task-priority">
+                                    <option value="high">🔴 高优先级</option>
+                                    <option value="medium" selected>🟡 中优先级</option>
+                                    <option value="low">🟢 低优先级</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
                                 <label for="task-status" class="form-label">状态</label>
                                 <select class="form-select" id="task-status">
                                     <option value="pending">待处理</option>
                                     <option value="in-progress">进行中</option>
                                     <option value="completed">已完成</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="task-priority" class="form-label">优先级</label>
-                                <select class="form-select" id="task-priority">
-                                    <option value="high">高</option>
-                                    <option value="medium" selected>中</option>
-                                    <option value="low">低</option>
                                 </select>
                             </div>
                             <div class="col-12">
@@ -310,8 +344,15 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- 优先级过滤 -->
+                    <div class="filter-bar" id="filter-bar">
+                        <button class="filter-btn active" data-filter="all"><i class="fas fa-list-ul me-1"></i>全部</button>
+                        <button class="filter-btn" data-filter="high"><i class="fas fa-arrow-up me-1"></i>高</button>
+                        <button class="filter-btn" data-filter="medium"><i class="fas fa-minus me-1"></i>中</button>
+                        <button class="filter-btn" data-filter="low"><i class="fas fa-arrow-down me-1"></i>低</button>
+                    </div>
+
                     <div id="tasks-container">
-                        <!-- 任务将通过JavaScript动态加载 -->
                         <div class="text-center py-5">
                             <div class="spinner-border text-primary mb-3" role="status">
                                 <span class="visually-hidden">加载中...</span>
@@ -375,6 +416,7 @@
         {% if user %}
         // 全局变量
         let tasks = [];
+        let currentFilter = 'all';
 
         // DOM元素获取
         const taskForm = document.getElementById('task-form');
@@ -389,6 +431,13 @@
         const pendingTasksEl = document.getElementById('pending-tasks');
         const currentUsernameEl = document.getElementById('current-username');
         const logoutBtn = document.getElementById('logout-btn');
+
+        // 优先级映射
+        const priorityMap = {
+            high:   { label: '高',  icon: 'fa-arrow-up',   cls: 'priority-high' },
+            medium: { label: '中',  icon: 'fa-minus',      cls: 'priority-medium' },
+            low:    { label: '低',  icon: 'fa-arrow-down', cls: 'priority-low' }
+        };
 
         // 登出功能
         logoutBtn.addEventListener('click', async function() {
@@ -414,6 +463,16 @@
         resetFormBtn.addEventListener('click', function() {
             taskForm.reset();
             document.getElementById('task-title').focus();
+        });
+
+        // 过滤按钮
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.getAttribute('data-filter');
+                renderTasks();
+            });
         });
 
         // 表单提交处理
@@ -449,7 +508,6 @@
                     taskForm.reset();
                     document.getElementById('task-title').focus();
                     
-                    // 显示成功提示
                     showToast('任务创建成功！', 'success');
                 } else if (response.status === 401) {
                     window.location.href = '/login';
@@ -490,27 +548,36 @@
 
         // 渲染任务列表
         function renderTasks() {
-            if (tasks.length === 0) {
+            // 过滤
+            const filtered = currentFilter === 'all'
+                ? tasks
+                : tasks.filter(t => t.priority === currentFilter);
+
+            if (filtered.length === 0) {
+                const msg = currentFilter === 'all'
+                    ? '暂无任务'
+                    : `暂无${priorityMap[currentFilter]?.label || ''}优先级的任务`;
                 tasksContainer.innerHTML = `
                     <div class="text-center py-5">
                         <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted mb-2">暂无任务</h5>
-                        <p class="text-muted">点击上方"创建新任务"按钮开始添加您的第一个任务</p>
+                        <h5 class="text-muted mb-2">${msg}</h5>
+                        <p class="text-muted">${currentFilter === 'all' ? '点击上方"创建新任务"按钮开始添加您的第一个任务' : '换个筛选条件试试'}</p>
                     </div>
                 `;
                 updateStats();
                 return;
             }
 
-            const taskHtml = tasks.map(task => {
+            const taskHtml = filtered.map(task => {
                 const statusClass = task.status === 'completed' ? 'status-completed' : 
                                  task.status === 'in-progress' ? 'status-in-progress' : 'status-pending';
-                
+                const pri = priorityMap[task.priority] || priorityMap.medium;
+
                 return `
-                    <div class="card task-card">
+                    <div class="card task-card ${task.priority === 'high' ? 'border-start border-danger border-4' : task.priority === 'low' ? 'border-start border-success border-4' : ''}">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start">
-                                <div>
+                                <div class="flex-grow-1 me-3">
                                     <h6 class="task-title mb-1">${escapeHtml(task.title)}</h6>
                                     <p class="task-description mb-2">${escapeHtml(task.description || '暂无描述')}</p>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
@@ -519,10 +586,13 @@
                                             <i class="fas fa-${task.status === 'completed' ? 'check-circle' : task.status === 'in-progress' ? 'sync-alt' : 'clock'} me-1"></i>
                                             ${task.status === 'completed' ? '已完成' : task.status === 'in-progress' ? '进行中' : '待处理'}
                                         </span>
-                                        ${task.priority ? `<span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'secondary'} ms-1">${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}</span>` : ''}
+                                        <span class="priority-badge ${pri.cls}">
+                                            <i class="fas ${pri.icon}"></i>
+                                            ${pri.label}优先级
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="text-end">
+                                <div class="text-end flex-shrink-0">
                                     <small class="text-muted d-block mb-1">${new Date(task.created_at).toLocaleString('zh-CN')}</small>
                                     <div class="task-actions">
                                         <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${task.id}">
@@ -581,7 +651,7 @@
             completedTasksEl.textContent = completed;
             inProgressTasksEl.textContent = inProgress;
             pendingTasksEl.textContent = pending;
-            taskCountEl.textContent = total;
+            taskCountEl.textContent = tasks.length;
         }
 
         // 编辑任务
@@ -589,17 +659,14 @@
             const task = tasks.find(t => t.id === taskId);
             if (!task) return;
             
-            // 填充表单
             document.getElementById('task-title').value = task.title;
             document.getElementById('task-description').value = task.description || '';
             document.getElementById('task-assignee').value = task.assignee || '';
             document.getElementById('task-status').value = task.status;
             document.getElementById('task-priority').value = task.priority || 'medium';
             
-            // 滚动到表单
             createForm.scrollIntoView({ behavior: 'smooth' });
             
-            // 修改表单提交行为
             taskForm.onsubmit = async function(e) {
                 e.preventDefault();
                 
@@ -635,11 +702,7 @@
                         taskForm.reset();
                         document.getElementById('task-title').focus();
                         
-                        // 恢复原始提交行为
-                        taskForm.onsubmit = function(e) {
-                            e.preventDefault();
-                            // ... original submit handler
-                        };
+                        taskForm.onsubmit = null;
                         
                         showToast('任务更新成功！', 'success');
                     } else if (response.status === 401) {
@@ -682,7 +745,6 @@
 
         // 显示通知
         function showToast(message, type) {
-            // 创建toast容器（如果不存在）
             let toastContainer = document.getElementById('toast-container');
             if (!toastContainer) {
                 toastContainer = document.createElement('div');
@@ -692,30 +754,21 @@
                 document.body.appendChild(toastContainer);
             }
 
-            // 创建toast
             const toast = document.createElement('div');
             toast.className = `toast ${type === 'error' ? 'bg-danger text-white' : type === 'success' ? 'bg-success text-white' : 'bg-primary text-white'} align-items-center`;
             toast.role = 'alert';
-            toast.setAttribute('aria-live', 'assertive');
-            toast.setAttribute('aria-atomic', 'true');
             toast.innerHTML = `
                 <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
+                    <div class="toast-body">${message}</div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             `;
 
             toastContainer.appendChild(toast);
 
-            // 初始化并显示toast
-            const bsToast = new bootstrap.Toast(toast, {
-                delay: 3000
-            });
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
             bsToast.show();
 
-            // 移除toast
             toast.addEventListener('hidden.bs.toast', () => {
                 toast.remove();
                 if (toastContainer.children.length === 0) {
@@ -724,22 +777,17 @@
             });
         }
 
-        // HTML转义函数
+        // HTML转义
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // 页面加载完成后初始化
+        // 页面初始化
         document.addEventListener('DOMContentLoaded', async function() {
-            // 初始化表单
             document.getElementById('task-title').focus();
-            
-            // 加载任务
             fetchTasks();
-            
-            // 设置定时刷新（每30秒）
             setInterval(fetchTasks, 30000);
         });
         {% endif %}
