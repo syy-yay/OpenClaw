@@ -2,7 +2,7 @@
 """团队任务管理系统 - 后端主程序"""
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from functools import wraps
-from models import db, Task, User, LoginLog, Comment, Tag, task_tags
+from models import db, Task, User, LoginLog, Comment, Tag, task_tags, Note
 import os
 import time
 from datetime import datetime, timedelta, date
@@ -507,6 +507,15 @@ def create_app():
 
         return jsonify([t.to_dict() for t in tasks])
 
+    @app.route('/api/tasks/<int:task_id>', methods=['GET'])
+    @login_required
+    def get_task_detail(task_id):
+        """获取任务详情（含备注）"""
+        task = Task.query.get_or_404(task_id)
+        result = task.to_dict()
+        result['notes'] = [n.to_dict() for n in task.notes.order_by(Note.created_at.asc()).all()]
+        return jsonify(result)
+
     @app.route('/api/tasks', methods=['POST'])
     @role_required('admin', 'user')
     def create_task():
@@ -725,6 +734,59 @@ def create_app():
         task.tags.remove(tag)
         db.session.commit()
         return jsonify({'success': True, 'task': task.to_dict()})
+
+    # ==================== 备注 API ====================
+    @app.route('/api/tasks/<int:task_id>/notes', methods=['POST'])
+    @login_required
+    def create_note(task_id):
+        """添加备注"""
+        task = Task.query.get_or_404(task_id)
+        user = get_current_user()
+        data = request.get_json() or {}
+
+        content_text = (data.get('content') or '').strip()
+        if not content_text:
+            return jsonify({'error': '备注内容不能为空'}), 400
+        if len(content_text) > 10000:
+            return jsonify({'error': '备注内容不能超过10000字符'}), 400
+
+        note = Note(task_id=task.id, user_id=user.id, content=content_text)
+        db.session.add(note)
+        db.session.commit()
+        return jsonify({'success': True, 'note': note.to_dict()}), 201
+
+    @app.route('/api/notes/<int:note_id>', methods=['PUT'])
+    @login_required
+    def update_note(note_id):
+        """编辑备注（仅创建者可编辑）"""
+        note = Note.query.get_or_404(note_id)
+        user = get_current_user()
+        if note.user_id != user.id and not user.is_admin:
+            return jsonify({'error': '无权编辑此备注'}), 403
+
+        data = request.get_json() or {}
+        content_text = (data.get('content') or '').strip()
+        if not content_text:
+            return jsonify({'error': '备注内容不能为空'}), 400
+        if len(content_text) > 10000:
+            return jsonify({'error': '备注内容不能超过10000字符'}), 400
+
+        note.content = content_text
+        db.session.commit()
+        return jsonify({'success': True, 'note': note.to_dict()})
+
+    @app.route('/api/notes/<int:note_id>', methods=['DELETE'])
+    @login_required
+    def delete_note(note_id):
+        """删除备注（仅创建者和管理员可删除）"""
+        note = Note.query.get_or_404(note_id)
+        user = get_current_user()
+        if note.user_id != user.id and not user.is_admin:
+            return jsonify({'error': '无权删除此备注'}), 403
+
+        db.session.delete(note)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '备注已删除'})
     return app
 
 
