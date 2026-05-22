@@ -207,6 +207,17 @@
         }
         .filter-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
         .filter-btn.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+
+        .search-bar { margin-bottom: 1rem; }
+        .search-bar .input-group-text { border-radius: 20px 0 0 20px; }
+        .search-bar .form-control { border-radius: 0; }
+        .search-bar .btn { border-radius: 0 20px 20px 0; }
+        .search-bar .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.25rem rgba(74,111,165,0.25); }
+        .search-bar .input-group:focus-within .input-group-text,
+        .search-bar .input-group:focus-within .form-control,
+        .search-bar .input-group:focus-within .btn {
+            border-color: var(--primary-color);
+        }
         
         @media (max-width: 768px) {
             .header-section {
@@ -351,6 +362,16 @@
                         <button class="filter-btn" data-filter="medium"><i class="fas fa-minus me-1"></i>中</button>
                         <button class="filter-btn" data-filter="low"><i class="fas fa-arrow-down me-1"></i>低</button>
                     </div>
+                    <!-- 搜索框 -->
+                    <div class="search-bar">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="search-input" placeholder="搜索任务标题…" autocomplete="off">
+                            <button class="btn btn-outline-secondary border-start-0" id="search-clear" title="清除搜索">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
 
                     <div id="tasks-container">
                         <div class="text-center py-5">
@@ -417,6 +438,7 @@
         // 全局变量
         let tasks = [];
         let currentFilter = 'all';
+        let searchQuery = '';
 
         // DOM元素获取
         const taskForm = document.getElementById('task-form');
@@ -473,6 +495,30 @@
                 currentFilter = this.getAttribute('data-filter');
                 renderTasks();
             });
+        });
+
+        // 搜索框 - 实时过滤
+        const searchInput = document.getElementById('search-input');
+        const searchClear = document.getElementById('search-clear');
+
+        searchInput.addEventListener('input', function() {
+            searchQuery = this.value.trim();
+            renderTasks();
+        });
+
+        searchClear.addEventListener('click', function() {
+            searchInput.value = '';
+            searchQuery = '';
+            searchInput.focus();
+            renderTasks();
+        });
+
+        // Ctrl+K 快捷键聚焦搜索框
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInput?.focus();
+            }
         });
 
         // 表单提交处理
@@ -549,14 +595,26 @@
         // 渲染任务列表
         function renderTasks() {
             // 过滤
-            const filtered = currentFilter === 'all'
-                ? tasks
-                : tasks.filter(t => t.priority === currentFilter);
+            // 搜索 + 优先级联合过滤
+            let filtered = tasks;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(t => t.title.toLowerCase().includes(q));
+            }
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(t => t.priority === currentFilter);
+            }
 
             if (filtered.length === 0) {
-                const msg = currentFilter === 'all'
-                    ? '暂无任务'
-                    : `暂无${priorityMap[currentFilter]?.label || ''}优先级的任务`;
+                // 空状态提示
+                let msg;
+                if (searchQuery) {
+                    msg = `未搜索到"${escapeHtml(searchQuery)}"相关任务`;
+                } else if (currentFilter === 'all') {
+                    msg = '暂无任务';
+                } else {
+                    msg = `暂无${priorityMap[currentFilter]?.label || ''}优先级的任务`;
+                }
                 tasksContainer.innerHTML = `
                     <div class="text-center py-5">
                         <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
