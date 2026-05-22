@@ -2,7 +2,7 @@
 """团队任务管理系统 - 后端主程序"""
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from functools import wraps
-from models import db, Task, User, LoginLog, Comment
+from models import db, Task, User, LoginLog, Comment, Tag, task_tags
 import os
 import time
 from datetime import datetime, timedelta, date
@@ -486,12 +486,20 @@ def create_app():
     @app.route('/api/tasks', methods=['GET'])
     @login_required
     def get_tasks():
-        # 支持可选排序参数: ?sort=priority&order=asc (默认 priority 降序: high→medium→low)
+        # 支持可选排序参数: ?sort=priority&order=asc
         sort_by = request.args.get('sort', 'priority')
         order = request.args.get('order', 'desc')
 
+        # 按标签筛选: ?tag=标签名
+        tag_filter = request.args.get('tag')
+
         tasks = Task.query.all()
-        # 按优先级排序（high=0, medium=1, low=2）
+
+        # 按标签筛选
+        if tag_filter:
+            tasks = [t for t in tasks if tag_filter in [tag.name for tag in t.tags]]
+
+        # 按优先级排序
         if sort_by == 'priority':
             tasks.sort(key=lambda t: t.priority_order)
             if order == 'desc':
@@ -527,6 +535,14 @@ def create_app():
         )
         db.session.add(task)
         db.session.commit()
+
+        # 处理标签
+        if 'tags' in data and isinstance(data['tags'], list):
+            for tag_name in data['tags']:
+                tag = Tag.query.filter_by(name=tag_name).first()
+                if tag:
+                    task.tags.append(tag)
+            db.session.commit()
 
         return jsonify(task.to_dict()), 201
 
@@ -632,6 +648,83 @@ def create_app():
         db.session.commit()
 
         return jsonify({'success': True, 'message': '评论已删除'})
+
+
+    # ==================== 标签 API ====================
+    @app.route('/api/tags', methods=['GET'])
+    @login_required
+    def get_tags():
+        """获取所有标签"""
+        tags = Tag.query.all()
+        return jsonify([t.to_dict() for t in tags])
+
+    @app.route('/api/tags', methods=['POST'])
+    @login_required
+    def create_tag():
+        """创建标签"""
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        if not name:
+            return jsonify({'error': '标签名称不能为空'}), 400
+        if len(name) > 50:
+            return jsonify({'error': '标签名称不能超过50个字符'}), 400
+
+        existing = Tag.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({'error': '标签名称已存在', 'tag': existing.to_dict()}), 400
+
+        color = data.get('color', '#4a6fa5')
+        tag = Tag(name=name, color=color)
+        db.session.add(tag)
+        db.session.commit()
+
+        return jsonify({'success': True, 'tag': tag.to_dict()}), 201
+
+    @app.route('/api/tags/<int:tag_id>', methods=['DELETE'])
+    @login_required
+    def delete_tag(tag_id):
+        """删除标签"""
+        tag = Tag.query.get_or_404(tag_id)
+        tag.tasks = []  # 解除所有关联
+        db.session.delete(tag)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '标签已删除'})
+
+    @app.route('/api/tasks/<int:task_id>/tags', methods=['POST'])
+    @login_required
+    def add_task_tag(task_id):
+        """为任务添加标签"""
+        task = Task.query.get_or_404(task_id)
+        data = request.get_json() or {}
+        tag_name = (data.get('tag') or '').strip()
+
+        if not tag_name:
+            return jsonify({'error': '标签名称不能为空'}), 400
+
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if not tag:
+            return jsonify({'error': f'标签 "{tag_name}" 不存在'}), 404
+
+        if tag in task.tags:
+            return jsonify({'error': '该任务已包含此标签'}), 400
+
+        task.tags.append(tag)
+        db.session.commit()
+        return jsonify({'success': True, 'task': task.to_dict()})
+
+    @app.route('/api/tasks/<int:task_id>/tags/<int:tag_id>', methods=['DELETE'])
+    @login_required
+    def remove_task_tag(task_id, tag_id):
+        """移除任务的指定标签"""
+        task = Task.query.get_or_404(task_id)
+        tag = Tag.query.get_or_404(tag_id)
+
+        if tag not in task.tags:
+            return jsonify({'error': '该任务不包含此标签'}), 404
+
+        task.tags.remove(tag)
+        db.session.commit()
+        return jsonify({'success': True, 'task': task.to_dict()})
     return app
 
 
