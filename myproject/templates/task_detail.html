@@ -29,34 +29,25 @@
         .badge-progress { background: #d1ecf1; color: #0c5460; }
         .badge-completed { background: #d4edda; color: #155724; }
 
-        /* 评论 */
+        /* 评论/备注通用气泡 */
         .comment-avatar {
             width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
             background: #e9ecef; display: flex; align-items: center; justify-content: center;
             font-weight: 700; color: var(--primary); font-size: 1rem; flex-shrink: 0;
         }
-        .comment-bubble {
+        .bubble {
             background: #f8f9fa; border-radius: 12px 18px 18px 12px; padding: .75rem 1rem;
-            position: relative; flex: 1;
+            flex: 1;
         }
-        .comment-author { font-weight: 600; font-size: .9rem; color: var(--primary); }
-        .comment-time { font-size: .78rem; color: #999; }
-        .comment-text { font-size: .95rem; color: #333; margin-top: .3rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .bubble-author { font-weight: 600; font-size: .9rem; color: var(--primary); }
+        .bubble-time { font-size: .78rem; color: #999; }
+        .bubble-text { font-size: .95rem; color: #333; margin-top: .3rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 
-        .comment-input-area textarea {
+        .input-area textarea {
             border-radius: 12px; resize: none; padding: .75rem 1rem;
             border: 1px solid #ddd; transition: border-color .2s;
         }
-        .comment-input-area textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,111,165,.15); }
-
-        .comment-divider {
-            display: flex; align-items: center; color: #bbb; font-size: .85rem; margin: 1rem 0;
-        }
-        .comment-divider::before, .comment-divider::after {
-            content: ''; flex: 1; height: 1px; background: #e9ecef;
-        }
-        .comment-divider::before { margin-right: .75rem; }
-        .comment-divider::after { margin-left: .75rem; }
+        .input-area textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,111,165,.15); }
 
         .empty-state { padding: 2.5rem 1rem; text-align: center; color: #aaa; }
         .empty-state i { font-size: 2.5rem; margin-bottom: .75rem; }
@@ -72,6 +63,17 @@
 
         .spinner-mini { display: inline-block; width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: .3rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 备注编辑内联 */
+        .note-edit-area textarea { border-radius: 8px; resize: none; font-size: .9rem; }
+
+        /* 备注卡片列表 */
+        .note-item {
+            border-bottom: 1px solid #f0f0f0; padding: .75rem 0;
+        }
+        .note-item:last-child { border-bottom: none; }
+        .note-content { font-size: .93rem; color: #444; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .note-meta { font-size: .78rem; color: #999; }
     </style>
 </head>
 <body>
@@ -93,7 +95,7 @@
 <div class="container my-4">
     <div class="row g-4">
 
-        <!-- ====== 左侧：任务信息 ====== -->
+        <!-- ====== 左侧：任务信息 + 备注 ====== -->
         <div class="col-lg-5">
 
             <!-- 任务信息卡片 -->
@@ -109,13 +111,47 @@
             </div>
 
             <!-- 进度概览 -->
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-chart-pie me-2 text-success"></i>项目进度
                 </div>
                 <div class="card-body" id="progress-section">
                     <div class="text-center py-3 text-muted">
                         <div class="spinner-border spinner-border-sm me-2"></div>加载中…
+                    </div>
+                </div>
+            </div>
+
+            <!-- 备注卡片 -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-sticky-note me-2 text-warning"></i>备注 <span id="notes-count" class="badge bg-secondary rounded-pill">0</span></span>
+                    <button class="btn btn-sm btn-outline-warning" id="toggle-add-note">
+                        <i class="fas fa-plus me-1"></i>添加
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- 添加备注 -->
+                    <div id="add-note-area" class="input-area mb-3" style="display:none;">
+                        <form id="note-form">
+                            <textarea class="form-control" id="note-text" rows="2" placeholder="写下备注…" maxlength="2000"></textarea>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <span class="text-muted small"><span id="note-char-count">0</span>/2000</span>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="cancel-add-note">取消</button>
+                                    <button type="submit" class="btn btn-sm btn-warning" id="note-submit-btn">
+                                        <i class="fas fa-save me-1"></i>保存
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 备注列表 -->
+                    <div id="notes-container">
+                        <div class="text-center py-3 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2"></div>加载备注…
+                        </div>
                     </div>
                 </div>
             </div>
@@ -130,12 +166,12 @@
                 <div class="card-body">
 
                     <!-- 发表评论 -->
-                    <div class="comment-input-area mb-4">
+                    <div class="input-area mb-4">
                         <form id="comment-form">
                             <textarea class="form-control" id="comment-text" rows="3" placeholder="写下你的评论…" maxlength="2000"></textarea>
                             <div class="d-flex justify-content-between align-items-center mt-2">
-                                <span class="text-muted small"><span id="char-count">0</span>/2000</span>
-                                <button type="submit" class="btn btn-primary btn-sm px-4" id="submit-btn">
+                                <span class="text-muted small"><span id="comment-char-count">0</span>/2000</span>
+                                <button type="submit" class="btn btn-primary btn-sm px-4" id="comment-submit-btn">
                                     <i class="fas fa-paper-plane me-1"></i>发表评论
                                 </button>
                             </div>
@@ -161,7 +197,6 @@
 <script>
 /* ==================== 工具函数 ==================== */
 const $ = id => document.getElementById(id);
-const qs = (s, p) => (p||document).querySelector(s);
 
 function toast(msg, type='success') {
     const colors = {success:'bg-success',error:'bg-danger',warning:'bg-warning text-dark',info:'bg-primary'};
@@ -204,17 +239,18 @@ function renderTask(task) {
         completed:     {label:'已完成', cls:'badge-completed',   icon:'check-circle'}
     };
     const s = statusMap[task.status] || statusMap.pending;
+    const priMap = {high:'🔴 高', medium:'🟡 中', low:'🟢 低'};
 
     $('page-subtitle').textContent = task.title || '任务详情';
 
-    // 进度百分比同理展示
     const pct = task.status === 'completed' ? 100 : task.status === 'in-progress' ? 60 : 20;
     const barColor = task.status === 'completed' ? 'bg-success' : task.status === 'in-progress' ? 'bg-warning' : 'bg-secondary';
 
     $('task-info').innerHTML = `
         <h5 class="mb-2">${escHtml(task.title)}</h5>
-        <div class="mb-2">
+        <div class="d-flex flex-wrap gap-2 mb-2">
             <span class="badge-status ${s.cls}"><i class="fas fa-${s.icon} me-1"></i>${s.label}</span>
+            ${task.priority ? `<span class="badge-status" style="background:#e8f5e9;color:#2e7d32;">${priMap[task.priority] || task.priority}</span>` : ''}
         </div>
         <p class="text-muted mb-2" style="white-space:pre-wrap;word-break:break-word;">${escHtml(task.description || '暂无描述')}</p>
         <hr>
@@ -257,7 +293,197 @@ function renderProgress(prog) {
     `;
 }
 
-/* ==================== 评论 ==================== */
+/* ==================== 备注 ==================== */
+let notesEditId = null; // 正在编辑的备注ID
+
+async function loadNotes(taskId) {
+    try {
+        const r = await fetch(`/api/tasks/${taskId}/notes`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        renderNotes(data.notes || []);
+    } catch(e) {
+        $('notes-container').innerHTML = `<div class="alert alert-danger mb-0 small">加载备注失败：${escHtml(e.message)}</div>`;
+    }
+}
+
+function renderNotes(notes) {
+    const container = $('notes-container');
+    $('notes-count').textContent = notes.length;
+
+    if (!notes.length) {
+        container.innerHTML = `<div class="empty-state py-3"><i class="far fa-sticky-note" style="font-size:1.8rem;"></i><p class="small">暂无备注</p></div>`;
+        return;
+    }
+
+    const html = notes.map(n => {
+        const author = n.author || n.author_name || n.created_by || '';
+        const time = n.created_at ? new Date(n.created_at).toLocaleString('zh-CN') : '';
+        const isEditing = notesEditId === n.id;
+
+        if (isEditing) {
+            return `
+            <div class="note-item" data-id="${n.id}">
+                <div class="note-edit-area mb-2">
+                    <textarea class="form-control note-edit-text" rows="2" maxlength="2000">${escHtml(n.content || n.text || '')}</textarea>
+                    <div class="d-flex justify-content-end gap-1 mt-2">
+                        <button class="btn btn-sm btn-outline-secondary note-edit-cancel">取消</button>
+                        <button class="btn btn-sm btn-warning note-edit-save"><i class="fas fa-save me-1"></i>保存</button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        return `
+        <div class="note-item" data-id="${n.id}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1 me-2">
+                    <div class="note-content">${escHtml(n.content || n.text || '')}</div>
+                    <div class="note-meta mt-1">
+                        ${author ? `<span class="me-2"><i class="far fa-user me-1"></i>${escHtml(author)}</span>` : ''}
+                        <span><i class="far fa-clock me-1"></i>${time}</span>
+                    </div>
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <button class="btn btn-sm btn-outline-primary py-0 px-1 note-edit-btn" data-id="${n.id}" title="编辑"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-1 note-del-btn" data-id="${n.id}" title="删除"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+
+    // 绑定编辑/删除事件
+    container.querySelectorAll('.note-edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const noteId = parseInt(this.getAttribute('data-id'));
+            startEditNote(noteId);
+        });
+    });
+    container.querySelectorAll('.note-del-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const noteId = parseInt(this.getAttribute('data-id'));
+            deleteNote(noteId);
+        });
+    });
+    // 编辑状态下的事件
+    container.querySelectorAll('.note-edit-save').forEach(btn => {
+        btn.addEventListener('click', saveEditNote);
+    });
+    container.querySelectorAll('.note-edit-cancel').forEach(btn => {
+        btn.addEventListener('click', cancelEditNote);
+    });
+}
+
+function startEditNote(noteId) {
+    notesEditId = noteId;
+    loadNotes(getTaskId());
+}
+
+function cancelEditNote() {
+    notesEditId = null;
+    loadNotes(getTaskId());
+}
+
+async function saveEditNote(e) {
+    const taskId = getTaskId();
+    if (!taskId) return toast('缺少任务ID', 'error');
+
+    const item = e.target.closest('.note-item');
+    if (!item) return;
+    const noteId = parseInt(item.getAttribute('data-id'));
+    const textarea = item.querySelector('.note-edit-text');
+    const content = textarea.value.trim();
+    if (!content) return toast('备注内容不能为空', 'warning');
+    if (content.length > 2000) return toast('备注不能超过2000字', 'warning');
+
+    try {
+        const r = await fetch(`/api/tasks/${taskId}/notes/${noteId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content })
+        });
+        if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || `HTTP ${r.status}`);
+        notesEditId = null;
+        toast('备注已更新');
+        await loadNotes(taskId);
+    } catch(e) {
+        toast('更新失败：'+e.message, 'error');
+    }
+}
+
+async function deleteNote(noteId) {
+    if (!confirm('确定删除这条备注？')) return;
+    const taskId = getTaskId();
+    try {
+        const r = await fetch(`/api/tasks/${taskId}/notes/${noteId}`, { method: 'DELETE' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        toast('备注已删除');
+        await loadNotes(taskId);
+    } catch(e) {
+        toast('删除失败：'+e.message, 'error');
+    }
+}
+
+// 添加备注表单切换
+$('toggle-add-note').addEventListener('click', function() {
+    const area = $('add-note-area');
+    const isHidden = area.style.display === 'none' || area.style.display === '';
+    area.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) $('note-text').focus();
+});
+
+$('cancel-add-note').addEventListener('click', function() {
+    $('add-note-area').style.display = 'none';
+    $('note-text').value = '';
+    $('note-char-count').textContent = '0';
+    notesEditId = null;
+});
+
+// 提交备注
+$('note-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const taskId = getTaskId();
+    if (!taskId) return toast('缺少任务ID', 'error');
+
+    const textarea = $('note-text');
+    const content = textarea.value.trim();
+    if (!content) return toast('请输入备注内容', 'warning');
+    if (content.length > 2000) return toast('备注不能超过2000字', 'warning');
+
+    const btn = $('note-submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-mini"></span>保存中…';
+
+    try {
+        const r = await fetch(`/api/tasks/${taskId}/notes`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ content })
+        });
+        if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || `HTTP ${r.status}`);
+        textarea.value = '';
+        $('note-char-count').textContent = '0';
+        $('add-note-area').style.display = 'none';
+        toast('备注添加成功');
+        await loadNotes(taskId);
+    } catch(e) {
+        toast('添加失败：'+e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>保存';
+    }
+});
+
+// 备注字数统计
+$('note-text').addEventListener('input', function() {
+    const len = this.value.length;
+    $('note-char-count').textContent = len;
+    if (len > 2000) this.value = this.value.substring(0, 2000);
+});
+
+/* ==================== 评论（保留原功能） ==================== */
 async function loadComments(taskId) {
     try {
         const r = await fetch(`/api/tasks/${taskId}/comments`);
@@ -271,21 +497,14 @@ async function loadComments(taskId) {
 
 function renderComments(comments) {
     const container = $('comments-container');
-    const countEl = $('comment-count');
-
-    countEl.textContent = comments.length;
+    $('comment-count').textContent = comments.length;
 
     if (!comments.length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="far fa-comment-dots"></i>
-                <p>暂无评论，快来发表第一条评论吧</p>
-            </div>`;
+        container.innerHTML = `<div class="empty-state"><i class="far fa-comment-dots"></i><p>暂无评论，快来发表第一条评论吧</p></div>`;
         return;
     }
 
     const html = comments.map(c => {
-        // 取头像首字母
         const initial = (c.author || c.author_name || '匿')[0];
         const avatar = c.author_avatar
             ? `<img src="${escHtml(c.author_avatar)}" class="comment-avatar" alt="">`
@@ -294,20 +513,18 @@ function renderComments(comments) {
         return `
         <div class="d-flex gap-3 mb-3">
             ${avatar}
-            <div class="comment-bubble">
+            <div class="bubble">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="comment-author">${escHtml(c.author || c.author_name || '匿名')}</span>
-                    <span class="comment-time">${c.created_at ? new Date(c.created_at).toLocaleString('zh-CN') : ''}</span>
+                    <span class="bubble-author">${escHtml(c.author || c.author_name || '匿名')}</span>
+                    <span class="bubble-time">${c.created_at ? new Date(c.created_at).toLocaleString('zh-CN') : ''}</span>
                 </div>
-                <div class="comment-text">${escHtml(c.content || c.text || '')}</div>
+                <div class="bubble-text">${escHtml(c.content || c.text || '')}</div>
             </div>
         </div>`;
     }).join('');
-
     container.innerHTML = html;
 }
 
-/* ==================== 发表评论 ==================== */
 $('comment-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const taskId = getTaskId();
@@ -318,7 +535,7 @@ $('comment-form').addEventListener('submit', async function(e) {
     if (!content) return toast('请输入评论内容', 'warning');
     if (content.length > 2000) return toast('评论不能超过2000字', 'warning');
 
-    const btn = $('submit-btn');
+    const btn = $('comment-submit-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-mini"></span>提交中…';
 
@@ -328,12 +545,9 @@ $('comment-form').addEventListener('submit', async function(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content })
         });
-        if (!r.ok) {
-            const err = await r.json().catch(()=>({}));
-            throw new Error(err.error || `HTTP ${r.status}`);
-        }
+        if (!r.ok) throw new Error((await r.json().catch(()=>({}))).error || `HTTP ${r.status}`);
         textarea.value = '';
-        $('char-count').textContent = '0';
+        $('comment-char-count').textContent = '0';
         toast('评论发表成功');
         await loadComments(taskId);
     } catch(e) {
@@ -344,10 +558,9 @@ $('comment-form').addEventListener('submit', async function(e) {
     }
 });
 
-/* ==================== 字数统计 ==================== */
 $('comment-text').addEventListener('input', function() {
     const len = this.value.length;
-    $('char-count').textContent = len;
+    $('comment-char-count').textContent = len;
     if (len > 2000) this.value = this.value.substring(0, 2000);
 });
 
@@ -358,12 +571,14 @@ document.addEventListener('DOMContentLoaded', function() {
         $('task-info').innerHTML = `<div class="alert alert-warning mb-0"><i class="fas fa-exclamation-triangle me-2"></i>缺少任务 ID 参数</div>`;
         $('comments-container').innerHTML = '';
         $('progress-section').innerHTML = '';
+        $('notes-container').innerHTML = '';
         return;
     }
 
     loadTask(taskId);
     loadProgress(taskId);
     loadComments(taskId);
+    loadNotes(taskId);
 });
 </script>
 </body>
