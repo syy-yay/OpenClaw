@@ -5,7 +5,7 @@ from functools import wraps
 from models import db, Task, User, LoginLog, Comment
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import re
 import hashlib
 
@@ -510,12 +510,20 @@ def create_app():
         if priority not in ('high', 'medium', 'low'):
             return jsonify({'error': '优先级无效（high/medium/low）'}), 400
 
+        due_date = None
+        if 'due_date' in data and data['due_date']:
+            try:
+                due_date = date.fromisoformat(data['due_date'])
+            except (ValueError, TypeError):
+                return jsonify({'error': '日期格式无效，请使用 YYYY-MM-DD'}), 400
+
         task = Task(
             title=data['title'],
             description=data.get('description', ''),
             assignee=data.get('assignee', ''),
             status=data.get('status', 'pending'),
             priority=priority,
+            due_date=due_date,
         )
         db.session.add(task)
         db.session.commit()
@@ -537,6 +545,15 @@ def create_app():
             if data['priority'] not in ('high', 'medium', 'low'):
                 return jsonify({'error': '优先级无效（high/medium/low）'}), 400
             task.priority = data['priority']
+
+        if 'due_date' in data:
+            if data['due_date']:
+                try:
+                    task.due_date = date.fromisoformat(data['due_date'])
+                except (ValueError, TypeError):
+                    return jsonify({'error': '日期格式无效，请使用 YYYY-MM-DD'}), 400
+            else:
+                task.due_date = None
 
         db.session.commit()
 

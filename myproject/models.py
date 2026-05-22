@@ -17,6 +17,7 @@ class Task(db.Model):
     assignee = db.Column(db.String(50), default='')
     status = db.Column(db.String(20), default='pending')
     priority = db.Column(db.String(10), default='medium')  # high, medium, low
+    due_date = db.Column(db.Date, nullable=True)  # 截止日期
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -27,6 +28,14 @@ class Task(db.Model):
     def __repr__(self):
         return f'<Task {self.id}: {self.title} [{self.priority}]>'
 
+    @property
+    def days_remaining(self):
+        """返回距截止日期剩余天数（负数表示已过期）"""
+        if not self.due_date:
+            return None
+        delta = self.due_date - datetime.utcnow().date()
+        return delta.days
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -35,6 +44,8 @@ class Task(db.Model):
             'assignee': self.assignee,
             'status': self.status,
             'priority': self.priority,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'days_remaining': self.days_remaining,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
