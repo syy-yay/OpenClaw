@@ -7,6 +7,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        .auth-link { color: rgba(255,255,255,.85); text-decoration: none; padding: .35rem .85rem; border-radius: 20px; font-size: .9rem; transition: all .2s; }
+        .auth-link:hover { color: #fff; background: rgba(255,255,255,.15); }
+        .auth-link-primary { background: rgba(255,255,255,.2); }
+        .auth-link-primary:hover { background: rgba(255,255,255,.35); }
+        .user-avatar-sm { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e9ecef; display: inline-flex; align-items: center; justify-content: center; color: var(--primary-color); font-weight: 700; font-size: .9rem; }
+        .dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: .4rem; min-width: 140px; }
+        .dropdown-item { border-radius: 8px; padding: .45rem .85rem; font-size: .9rem; }
+        .dropdown-item:hover { background: #f0f4ff; }
+        .dropdown-item.text-danger:hover { background: #fff0f0; }
+    </style>
+    <style>
         :root { --primary-color: #4a6fa5; --secondary-color: #6c757d; --success-color: #28a745; --warning-color: #ffc107; --danger-color: #dc3545; --light-bg: #f8f9fa; --card-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         body { background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .header-section { background: linear-gradient(135deg, var(--primary-color), #2c3e50); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -39,8 +50,15 @@
 <body>
     <header class="header-section">
         <div class="container">
-            <h1><i class="fas fa-tasks me-2"></i>团队任务管理系统</h1>
-            <p class="lead mb-0">高效协作 · 清晰进度 · 精准管理</p>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-tasks me-2"></i>团队任务管理系统</h1>
+                    <p class="lead mb-0">高效协作 · 清晰进度 · 精准管理</p>
+                </div>
+                <div id="auth-controls" class="d-flex align-items-center gap-2">
+                    <!-- 动态渲染：登录状态或未登录 -->
+                </div>
+            </div>
         </div>
     </header>
 
@@ -144,6 +162,85 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ==================== JWT Auth ====================
+        let currentUser = null;
+
+        function getToken() { return localStorage.getItem('jwt_token'); }
+        function getUser() {
+            try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; }
+        }
+        function saveAuth(token, user) {
+            localStorage.setItem('jwt_token', token);
+            localStorage.setItem('jwt_user', JSON.stringify(user));
+        }
+        function clearAuth() {
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('jwt_user');
+            currentUser = null;
+        }
+
+        function renderAuthControls() {
+            const container = document.getElementById('auth-controls');
+            const user = currentUser || getUser();
+            if (user) {
+                const initial = (user.username || 'U')[0].toUpperCase();
+                const avatar = user.avatar_url
+                    ? `<img src="${escapeHtml(user.avatar_url)}" class="user-avatar-sm">`
+                    : `<span class="user-avatar-sm">${escapeHtml(initial)}</span>`;
+                container.innerHTML = `
+                    <div class="dropdown">
+                        <button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;">
+                            ${avatar}
+                            <span>${escapeHtml(user.username)}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
+                        </ul>
+                    </div>`;
+                document.getElementById('logout-btn')?.addEventListener('click', logout);
+            } else {
+                container.innerHTML = `
+                    <a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a>
+                    <a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>`;
+            }
+        }
+
+        async function checkAuth() {
+            const token = getToken();
+            if (!token) { currentUser = null; renderAuthControls(); return; }
+            try {
+                const r = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (r.ok) {
+                    const data = await r.json();
+                    if (data.authenticated) {
+                        currentUser = data.user;
+                        saveAuth(token, data.user);
+                    } else { clearAuth(); }
+                } else {
+                    clearAuth();
+                }
+            } catch(e) { /* offline, use cached user */ }
+            renderAuthControls();
+        }
+
+        async function logout() {
+            const token = getToken();
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                });
+            } catch(e) { /* ignore */ }
+            clearAuth();
+            renderAuthControls();
+            if (window.location.pathname !== '/') window.location.href = '/';
+        }
+
+        // ==================== 任务管理 ====================
         let tasks = [];
         let searchQuery = '';
 

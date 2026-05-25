@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册 - 团队任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;
+        }
+        .card { border: none; border-radius: 12px; box-shadow: 0 12px 24px rgba(0,0,0,0.1); background: #fff; padding: 2.5rem; width: 100%; max-width: 450px; }
+        h2 { margin-bottom: 1.5rem; color: #667eea; font-weight: 700; }
+        .form-control { background: #f8f9fa; border: 1px solid #ddd; padding: .7rem 1rem; border-radius: 8px; }
+        .form-control:focus { background: #fff; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.25); }
+        .form-control.valid { border-color: #28a745; }
+        .form-control.invalid { border-color: #dc3545; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; border-radius: 8px; padding: .7rem; }
+        .btn-primary:hover { opacity: .9; }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+        .alert-box { display: none; padding: .7rem 1rem; border-radius: 8px; font-size: .9rem; margin-bottom: 1rem; }
+        .alert-box.error { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-box.success { display: block; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .form-text { font-size: .8rem; color: #888; margin-top: .25rem; }
+        .form-text .error { color: #dc3545; }
+        .form-text .success { color: #28a745; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2 class="text-center"><i class="fas fa-user-plus me-2"></i>创建账号</h2>
+    <div id="alert-msg" class="alert-box"></div>
+    <form id="register-form">
+        <div class="mb-3">
+            <label class="form-label fw-semibold">用户名 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="username" placeholder="3~20 个字符" minlength="3" maxlength="20" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">邮箱 <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="email" placeholder="your@email.com" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">密码 <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="password" placeholder="至少 6 位" minlength="6" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">确认密码 <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="confirm-password" placeholder="再次输入密码" required>
+            <div class="form-text" id="confirm-hint"></div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2" id="register-btn">
+            <i class="fas fa-user-plus me-2"></i>注册
+        </button>
+    </form>
+    <div class="mt-4 text-center">
+        <a href="/login" class="text-decoration-none text-muted"><i class="fas fa-sign-in-alt me-1"></i>已有账号？立即登录</a>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+<script>
+const form = document.getElementById('register-form');
+const usernameInput = document.getElementById('username');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const confirmInput = document.getElementById('confirm-password');
+const confirmHint = document.getElementById('confirm-hint');
+const registerBtn = document.getElementById('register-btn');
+const alertMsg = document.getElementById('alert-msg');
+
+function showAlert(text, type) { alertMsg.textContent = text; alertMsg.className = 'alert-box ' + type; }
+
+// 实时密码确认检查
+confirmInput.addEventListener('input', function() {
+    const pw = passwordInput.value.trim();
+    const cpw = this.value.trim();
+    if (!cpw) { confirmHint.textContent = ''; this.className = ''; return; }
+    if (pw === cpw) {
+        confirmHint.innerHTML = '<span class="success">密码一致 ✓</span>';
+        this.className = 'valid';
+    } else {
+        confirmHint.innerHTML = '<span class="error">密码不一致</span>';
+        this.className = 'invalid';
+    }
+});
+
+// 密码修改时同步确认检查
+passwordInput.addEventListener('input', function() {
+    if (confirmInput.value.trim()) {
+        confirmInput.dispatchEvent(new Event('input'));
+    }
+});
+
+form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showAlert('', '');
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    const confirmPassword = confirmInput.value.trim();
+    if (!username || !email || !password || !confirmPassword) return showAlert('请填写所有必填项', 'error');
+    if (username.length < 3 || username.length > 20) return showAlert('用户名长度必须在 3~20 个字符之间', 'error');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showAlert('邮箱格式不正确', 'error');
+    if (password.length < 6) return showAlert('密码长度至少 6 位', 'error');
+    if (password !== confirmPassword) return showAlert('两次输入的密码不一致', 'error');
+    registerBtn.disabled = true;
+    registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>注册中…';
+    try {
+        const r = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password, confirm_password: confirmPassword })
+        });
+        const data = await r.json();
+        if (data.success) {
+            localStorage.setItem('jwt_token', data.token);
+            localStorage.setItem('jwt_user', JSON.stringify(data.user));
+            showAlert('注册成功，正在进入系统…', 'success');
+            setTimeout(() => { window.location.href = '/'; }, 800);
+        } else {
+            showAlert(data.message || '注册失败', 'error');
+        }
+    } catch(e) {
+        showAlert('网络错误，请稍后重试', 'error');
+    } finally {
+        registerBtn.disabled = false;
+        registerBtn.innerHTML = '<i class="fas fa-user-plus me-2"></i>注册';
+    }
+});
+</script>
+</body>
+</html>
