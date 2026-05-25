@@ -227,7 +227,8 @@ async function loadTask(taskId) {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const task = await r.json();
         renderTask(task);
-    } catch(e) {
+            loadAttachments();
+        } catch(e) {
         $('task-info').innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-triangle me-2"></i>加载任务失败：${escHtml(e.message)}</div>`;
     }
 }

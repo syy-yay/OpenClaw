@@ -6,7 +6,7 @@ from functools import wraps
 
 import jwt
 from flask import Flask, request, jsonify, render_template
-from models import db, Task, User, Tag, task_tags, Comment, Note
+from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment
 
 
 def create_app():
@@ -405,6 +405,105 @@ def create_app():
         db.session.commit()
         return jsonify({'success': True, 'message': '备注已删除'})
 
+
+    # ==================== 附件配置 ====================
+    UPLOAD_FOLDER = os.path.join(app.root_path, 'static')
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', 'csv', 'md', 'json', 'xml'}
+    MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
+
+    @app.route('/api/tasks/<int:task_id>/attachments', methods=['GET'])
+    def get_attachments(task_id):
+        task = Task.query.get_or_404(task_id)
+        return jsonify([a.to_dict() for a in task.attachments.all()])
+
+    @app.route('/api/tasks/<int:task_id>/attachments', methods=['POST'])
+    def upload_attachments(task_id):
+        task = Task.query.get_or_404(task_id)
+
+        if 'files' not in request.files:
+            return jsonify({'error': '未选择文件'}), 400
+
+        files = request.files.getlist('files')
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({'error': '未选择文件'}), 400
+
+        uploaded = []
+        errors = []
+
+        for file in files:
+            if file.filename == '':
+                continue
+
+            # 校验文件扩展名
+            ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+            if ext not in ALLOWED_EXTENSIONS:
+                errors.append({'file': file.filename, 'error': f'不支持的文件类型 (.{ext})'})
+                continue
+
+            # 校验文件大小
+            file.seek(0, os.SEEK_END)
+            size = file.tell()
+            file.seek(0)
+            if size > MAX_FILE_SIZE:
+                errors.append({'file': file.filename, 'error': '文件大小不能超过 20MB'})
+                continue
+
+            # 生成唯一文件名
+            import uuid
+            unique_name = f'{uuid.uuid4().hex}.{ext}'
+            year_month = datetime.utcnow().strftime('%Y/%m')
+            relative_dir = f'uploads/{year_month}'
+            abs_dir = os.path.join(UPLOAD_FOLDER, relative_dir)
+            os.makedirs(abs_dir, exist_ok=True)
+
+            filepath = os.path.join(abs_dir, unique_name)
+            file.save(filepath)
+
+            # 获取上传者
+            user = User.query.first()
+
+            att = Attachment(
+                task_id=task.id,
+                filename=f'{relative_dir}/{unique_name}',
+                original_name=file.filename,
+                file_size=size,
+                mime_type=file.content_type or 'application/octet-stream',
+                uploader_id=user.id if user else None,
+            )
+            db.session.add(att)
+            uploaded.append(att)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'uploaded': [a.to_dict() for a in uploaded],
+            'errors': errors,
+        }), 201
+
+    @app.route('/api/attachments/<int:att_id>/download', methods=['GET'])
+    def download_attachment(att_id):
+        att = Attachment.query.get_or_404(att_id)
+        filepath = os.path.join(app.static_folder, att.filename)
+        if not os.path.exists(filepath):
+            return jsonify({'error': '文件不存在'}), 404
+        from flask import send_file
+        return send_file(filepath, as_attachment=True, download_name=att.original_name)
+
+    @app.route('/api/attachments/<int:att_id>', methods=['DELETE'])
+    def delete_attachment(att_id):
+        att = Attachment.query.get_or_404(att_id)
+        filepath = os.path.join(app.static_folder, att.filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        db.session.delete(att)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '附件已删除'})
+
+    @app.route('/api/attachments/<int:att_id>/info', methods=['GET'])
+    def get_attachment_info(att_id):
+        att = Attachment.query.get_or_404(att_id)
+        return jsonify(att.to_dict())
     return app
 
 

@@ -205,3 +205,36 @@ class Note(db.Model):
 
     def __repr__(self):
         return f'<Note {self.id} on Task {self.task_id}>'
+
+
+class Attachment(db.Model):
+    """任务附件"""
+    __tablename__ = 'attachments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    filename = db.Column(db.String(200), nullable=False)
+    original_name = db.Column(db.String(200), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)
+    mime_type = db.Column(db.String(100), nullable=True)
+    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    task = db.relationship('Task', backref=db.backref('attachments', lazy='dynamic', order_by='Attachment.created_at.desc()'))
+    uploader = db.relationship('User', backref=db.backref('attachments', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'filename': self.filename,
+            'original_name': self.original_name,
+            'file_size': self.file_size,
+            'mime_type': self.mime_type,
+            'uploader': {'id': self.uploader.id, 'username': self.uploader.username} if self.uploader else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'download_url': '/api/attachments/' + str(self.id) + '/download',
+        }
+
+    def __repr__(self):
+        return '<Attachment {}: {}>'.format(self.id, self.original_name)
