@@ -67,7 +67,13 @@
         <div class="col-lg-6 col-md-8">
 
             <div class="card text-center p-4 mb-4">
-                <div class="user-avatar-lg" id="avatar-display">U</div>
+                <div class="position-relative" style="width:100px;margin:0 auto;cursor:pointer;" id="avatar-upload-area" title="点击更换头像">
+                    <div class="user-avatar-lg" id="avatar-display" style="border:4px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.1);">U</div>
+                    <div style="position:absolute;bottom:0;right:0;background:#4a6fa5;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-size:12px;">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <input type="file" id="avatar-file-input" accept="image/png,image/jpg,image/jpeg,image/gif,image/webp" style="display:none;">
+                </div>
                 <h4 class="mt-3 mb-1" id="profile-username">-</h4>
                 <span class="badge bg-primary rounded-pill" id="profile-role">-</span>
                 <hr>
@@ -149,7 +155,11 @@ async function loadProfile() {
 
 function renderProfile(user) {
     const initial = (user.username || 'U')[0].toUpperCase();
-    $('avatar-display').textContent = initial;
+    if (user.avatar_url) {
+        $('avatar-display').innerHTML = `<img src="${escHtml(user.avatar_url)}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        $('avatar-display').textContent = initial;
+    }
     $('profile-username').textContent = user.username || '-';
     $('profile-role').textContent = user.role === 'admin' ? '管理员' : '成员';
     $('profile-email').textContent = user.email || '-';
@@ -159,6 +169,45 @@ function renderProfile(user) {
     // Cache updated user data
     localStorage.setItem('jwt_user', JSON.stringify(user));
 }
+
+// 头像上传
+const avatarInput = document.getElementById('avatar-file-input');
+const avatarArea = document.getElementById('avatar-upload-area');
+avatarArea.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') avatarInput.click(); });
+avatarInput.addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    const allowed = ['image/png','image/jpg','image/jpeg','image/gif','image/webp'];
+    if (!allowed.includes(file.type)) { toast('不支持的图片格式', 'error'); this.value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { toast('图片不能超过 5MB', 'error'); this.value = ''; return; }
+
+    // 本地预览
+    const reader = new FileReader();
+    reader.onload = function(e) { $('avatar-display').innerHTML = `<img src="${e.target.result}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;">`; };
+    reader.readAsDataURL(file);
+
+    const fd = new FormData();
+    fd.append('avatar', file);
+    try {
+        const r = await fetch('/api/me/avatar', { method: 'POST', body: fd });
+        if (r.ok) {
+            const data = await r.json();
+            if (data.success) {
+                toast('头像更新成功');
+                // 更新 localStorage 中的用户缓存
+                const user = getUser();
+                if (user) { user.avatar_url = data.avatar_url; localStorage.setItem('jwt_user', JSON.stringify(user)); }
+            }
+        } else {
+            toast('上传失败', 'error');
+            loadProfile(); // 回滚
+        }
+    } catch(e) {
+        toast('上传失败：' + e.message, 'error');
+        loadProfile();
+    }
+    this.value = '';
+});
 
 $('logout-btn').addEventListener('click', async function() {
     const token = getToken();
