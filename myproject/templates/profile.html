@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - 团队任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4a6fa5; --primary-dark: #2c3e50; --light-bg: #f5f7fa; }
+        body { background: var(--light-bg); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+        .page-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff; padding: 1.75rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .card-header { background: #fff; border-bottom: 1px solid #eee; border-radius: 12px 12px 0 0 !important; font-weight: 600; }
+
+        .user-avatar-lg {
+            width: 100px; height: 100px; border-radius: 50%; object-fit: cover;
+            margin: 0 auto; display: block;
+            background: #e9ecef; display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; font-weight: 700; color: var(--primary);
+            border: 4px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .info-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: .7rem 0; border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #888; font-weight: 500; }
+        .info-value { color: #333; font-weight: 600; }
+
+        .toast-container { z-index: 1055; }
+        .spinner-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,.7);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .spinner-overlay.active { display: flex; }
+    </style>
+</head>
+<body>
+
+<div class="spinner-overlay" id="loading-overlay">
+    <div class="text-center">
+        <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+        <p class="mt-2 text-muted">加载中…</p>
+    </div>
+</div>
+
+<header class="page-header">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="mb-1"><i class="fas fa-user-circle me-2"></i>个人资料</h1>
+                <p class="mb-0 opacity-75">查看您的账户信息</p>
+            </div>
+            <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
+                <i class="fas fa-arrow-left me-1"></i>返回首页
+            </a>
+        </div>
+    </div>
+</header>
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+
+            <div class="card text-center p-4 mb-4">
+                <div class="user-avatar-lg" id="avatar-display">U</div>
+                <h4 class="mt-3 mb-1" id="profile-username">-</h4>
+                <span class="badge bg-primary rounded-pill" id="profile-role">-</span>
+                <hr>
+                <div class="info-row">
+                    <span class="info-label"><i class="far fa-envelope me-1"></i>邮箱</span>
+                    <span class="info-value" id="profile-email">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-shield-alt me-1"></i>用户 ID</span>
+                    <span class="info-value" id="profile-id">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="far fa-calendar-alt me-1"></i>注册时间</span>
+                    <span class="info-value" id="profile-created">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-sign-in-alt me-1"></i>上次登录</span>
+                    <span class="info-value" id="profile-login">-</span>
+                </div>
+            </div>
+
+            <div class="card p-3 text-center">
+                <button class="btn btn-outline-danger w-100" id="logout-btn">
+                    <i class="fas fa-sign-out-alt me-2"></i>退出登录
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const overlay = $('loading-overlay');
+
+function toast(msg, type='success') {
+    const colors = {success:'bg-success',error:'bg-danger',warning:'bg-warning text-dark'};
+    const el = document.createElement('div');
+    el.className = `toast ${colors[type]||'bg-primary'} text-white align-items-center`;
+    el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    document.querySelector('.toast-container').appendChild(el);
+    new bootstrap.Toast(el,{delay:3000}).show();
+    el.addEventListener('hidden.bs.toast',()=>el.remove());
+}
+
+function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function getToken() { return localStorage.getItem('jwt_token'); }
+
+function formatDate(d) {
+    if (!d) return '-';
+    try { return new Date(d).toLocaleString('zh-CN'); } catch(e) { return d; }
+}
+
+async function loadProfile() {
+    overlay.classList.add('active');
+    const token = getToken();
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    try {
+        const r = await fetch('/api/auth/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!r.ok) { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); window.location.href = '/login'; return; }
+        const data = await r.json();
+        if (!data.authenticated) { window.location.href = '/login'; return; }
+        renderProfile(data.user);
+    } catch(e) {
+        toast('加载失败：' + e.message, 'error');
+    } finally {
+        overlay.classList.remove('active');
+    }
+}
+
+function renderProfile(user) {
+    const initial = (user.username || 'U')[0].toUpperCase();
+    $('avatar-display').textContent = initial;
+    $('profile-username').textContent = user.username || '-';
+    $('profile-role').textContent = user.role === 'admin' ? '管理员' : '成员';
+    $('profile-email').textContent = user.email || '-';
+    $('profile-id').textContent = user.id || '-';
+    $('profile-created').textContent = formatDate(user.created_at);
+    $('profile-login').textContent = formatDate(user.last_login) + (user.last_login ? '' : '（首次登录）');
+    // Cache updated user data
+    localStorage.setItem('jwt_user', JSON.stringify(user));
+}
+
+$('logout-btn').addEventListener('click', async function() {
+    const token = getToken();
+    try {
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+    } catch(e) { /* ignore */ }
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('jwt_user');
+    toast('已退出登录');
+    setTimeout(() => { window.location.href = '/login'; }, 600);
+});
+
+document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+</body>
+</html>
