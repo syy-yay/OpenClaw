@@ -7,8 +7,8 @@ RUN adduser -D -H appuser
 
 COPY myproject/ .
 
-RUN pip3 install flask flask-sqlalchemy --break-system-packages 2>/dev/null || \
-    pip3 install flask flask-sqlalchemy
+RUN pip3 install flask flask-sqlalchemy pyjwt --break-system-packages 2>/dev/null || \
+    pip3 install flask flask-sqlalchemy pyjwt
 
 RUN mkdir -p /app/instance && \
     chown -R appuser:appuser /app && \
