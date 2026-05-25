@@ -396,7 +396,12 @@
                                 <h6 class="task-title mb-1"><a href="/task_detail.html?id=${task.id}">${escapeHtml(task.title)}</a></h6>
                                 <p class="task-description mb-2">${escapeHtml(task.description || '暂无描述')}</p>
                                 <div class="d-flex flex-wrap gap-2 mb-3">
-                                    ${task.assignee ? `<span class="assignee-badge"><i class="fas fa-user me-1"></i>${escapeHtml(task.assignee)}</span>` : ''}
+                                    ${task.assignee ? `<span class="assignee-badge d-inline-flex align-items-center gap-1 px-2 py-1">
+  ${task.assignee_avatar 
+    ? `<img src="${escapeHtml(task.assignee_avatar)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">`
+    : `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#4a6fa5;color:#fff;font-size:11px;font-weight:700;">${escapeHtml(task.assignee_initial || '?')}</span>`}
+  ${escapeHtml(task.assignee)}
+</span>` : ''}
                                     <span class="status-badge ${statusClass}"><i class="fas fa-${task.status === 'completed' ? 'check-circle' : task.status === 'in-progress' ? 'sync-alt' : 'clock'} me-1"></i>${task.status === 'completed' ? '已完成' : task.status === 'in-progress' ? '进行中' : '待处理'}</span>
                                     ${task.priority ? `<span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'secondary'} ms-1">${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}</span>` : ''}
                                 </div>

@@ -504,6 +504,42 @@ def create_app():
     def get_attachment_info(att_id):
         att = Attachment.query.get_or_404(att_id)
         return jsonify(att.to_dict())
+
+    # ==================== 头像上传 ====================
+    @app.route('/api/me/avatar', methods=['POST'])
+    def upload_my_avatar():
+        if 'avatar' not in request.files:
+            return jsonify({'error': '未选择头像文件'}), 400
+        file = request.files['avatar']
+        if file.filename == '':
+            return jsonify({'error': '未选择头像文件'}), 400
+
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
+            return jsonify({'error': '不支持的图片格式'}), 400
+
+        import uuid
+        from werkzeug.utils import secure_filename
+        filename = f'avatar_{uuid.uuid4().hex}.{ext}'
+        upload_dir = os.path.join(app.static_folder, 'avatars')
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+
+        avatar_url = f'/static/avatars/{filename}'
+        user = User.query.first()
+        if user:
+            user.avatar_url = avatar_url
+            db.session.commit()
+
+        return jsonify({'success': True, 'avatar_url': avatar_url})
+
+    @app.route('/api/users/<username>/avatar', methods=['GET'])
+    def get_user_avatar(username):
+        user = User.query.filter_by(username=username).first()
+        if not user or not user.avatar_url:
+            return jsonify({'avatar_url': None}), 404
+        return jsonify({'avatar_url': user.avatar_url})
     return app
 
 

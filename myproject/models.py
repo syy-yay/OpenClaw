@@ -46,11 +46,17 @@ class Task(db.Model):
         return delta.days
 
     def to_dict(self):
+        # 查找 assignee 对应用户（用于头像）
+        assignee_user = None
+        if self.assignee:
+            assignee_user = User.query.filter_by(username=self.assignee).first()
         return {
             'id': self.id,
             'title': self.title,
             'description': self.description,
             'assignee': self.assignee,
+            'assignee_avatar': assignee_user.avatar_url if assignee_user else None,
+            'assignee_initial': self.assignee[0].upper() if self.assignee else None,
             'status': self.status,
             'priority': self.priority,
             'due_date': self.due_date.isoformat() if self.due_date else None,
