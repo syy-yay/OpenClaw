@@ -46,8 +46,19 @@
         .search-clear { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); border: none; background: none; color: #aaa; cursor: pointer; display: none; }
         @media (max-width: 768px) { .header-section { padding: 1.5rem 0; } .stat-number { font-size: 2rem; } }
     </style>
+    <style>
+        .overdue-badge { background: #dc3545; color: #fff; padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: 600; margin-left: .3rem; }
+        .due-soon-badge { background: #ffc107; color: #333; padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: 600; margin-left: .3rem; }
+        .due-today-badge { background: #fd7e14; color: #fff; padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: 600; margin-left: .3rem; }
+        .toast-overdue { border-left: 4px solid #dc3545 !important; }
+        .toast-due-soon { border-left: 4px solid #ffc107 !important; }
+        .due-progress { height: 3px; border-radius: 2px; margin-top: .4rem; background: #e9ecef; max-width: 200px; }
+        .due-progress-bar { height: 100%; border-radius: 2px; transition: width .3s; }
+    </style>
+</head>
 </head>
 <body>
+    <div id="overdue-toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1060;"></div>
     <header class="header-section">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -123,6 +134,10 @@
                                 <option value="medium" selected>中</option>
                                 <option value="low">低</option>
                             </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="task-due-date" class="form-label">截止日期</label>
+                            <input type="date" class="form-control" id="task-due-date">
                         </div>
                         <div class="col-12">
                             <label for="task-description" class="form-label">任务描述</label>
@@ -337,7 +352,10 @@
                                 </div>
                             </div>
                         </div>
-                        ${task.days_remaining !== null ? `<div class="mt-2"><small class="${task.days_remaining < 0 ? 'text-danger' : task.days_remaining <= 2 ? 'text-warning' : 'text-muted'}"><i class="far fa-calendar-alt me-1"></i>${task.days_remaining === 0 ? '今天截止' : task.days_remaining < 0 ? `已过期 ${-task.days_remaining} 天` : `剩余 ${task.days_remaining} 天`}</small></div>` : ''}
+                        ${task.days_remaining !== null ? `<div class="mt-2 d-flex align-items-center gap-2">
+  ${task.days_remaining < 0 ? `<span class="overdue-badge"><i class="fas fa-exclamation-triangle me-1"></i>已超期 ${-task.days_remaining} 天</span>` : task.days_remaining === 0 ? `<span class="due-today-badge"><i class="far fa-clock me-1"></i>今天截止</span>` : task.days_remaining <= 2 ? `<span class="due-soon-badge"><i class="far fa-clock me-1"></i>剩余 ${task.days_remaining} 天</span>` : `<small class="text-muted"><i class="far fa-calendar-alt me-1"></i>剩余 ${task.days_remaining} 天</small>`}
+  <div class="due-progress flex-grow-1"><div class="due-progress-bar" style="width:${Math.min(100, Math.max(0, 100 - task.days_remaining * 10))}%;background:${task.days_remaining < 0 ? '#dc3545' : task.days_remaining <= 2 ? '#ffc107' : '#28a745'}"></div></div>
+</div>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -367,6 +385,7 @@
             document.getElementById('task-assignee').value = task.assignee || '';
             document.getElementById('task-status').value = task.status;
             document.getElementById('task-priority').value = task.priority || 'medium';
+            document.getElementById('task-due-date').value = task.due_date || '';
             createForm.scrollIntoView({ behavior: 'smooth' });
             taskForm.onsubmit = async function(e) {
                 e.preventDefault();
@@ -424,6 +443,34 @@
             t.addEventListener('hidden.bs.toast', () => { t.remove(); if (tc.children.length === 0) tc.remove(); });
         }
 
+        function showOverdueToast(task) {
+            const container = document.getElementById('overdue-toast-container');
+            if (!container) return;
+            const badge = task.days_remaining < 0 ? 'toast-overdue' : 'toast-due-soon';
+            const icon = task.days_remaining < 0 ? 'fa-exclamation-triangle text-danger' : 'fa-clock text-warning';
+            const msg = task.days_remaining < 0
+                ? `"${escapeHtml(task.title)}" 已超期 ${-task.days_remaining} 天！`
+                : task.days_remaining === 0
+                    ? `"${escapeHtml(task.title)}" 今天截止！`
+                    : `"${escapeHtml(task.title)}" 还剩 ${task.days_remaining} 天`;
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + badge;
+            toast.role = 'alert'; toast.setAttribute('aria-live', 'assertive'); toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `<div class="toast-header"><i class="fas ${icon} me-2"></i><strong class="me-auto">截止提醒</strong><button type="button" class="btn-close" data-bs-dismiss="toast"></button></div><div class="toast-body">${msg}</div>`;
+            container.appendChild(toast);
+            new bootstrap.Toast(toast, { delay: 6000 }).show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+
+        function checkOverdueNotifications() {
+            const overdue = tasks.filter(t => t.days_remaining !== null && t.days_remaining <= 0);
+            const soon = tasks.filter(t => t.days_remaining !== null && t.days_remaining > 0 && t.days_remaining <= 2);
+            // Show overdue first (max 5)
+            overdue.slice(0, 5).forEach(t => setTimeout(() => showOverdueToast(t), 300));
+            // Show soon after (max 3)
+            soon.slice(0, 3).forEach((t, i) => setTimeout(() => showOverdueToast(t), 1500 + i * 500));
+        }
+
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -433,6 +480,8 @@
                 window.location.href = '/login';
                 return;
             }
+            // 检查超期任务通知
+            setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();
             fetchTasks();
             setInterval(fetchTasks, 30000);
