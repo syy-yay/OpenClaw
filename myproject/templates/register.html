@@ -60,6 +60,9 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 <script>
+// 已登录则直接跳转首页
+if (localStorage.getItem('jwt_token')) { window.location.href = '/'; }
+
 const form = document.getElementById('register-form');
 const usernameInput = document.getElementById('username');
 const emailInput = document.getElementById('email');

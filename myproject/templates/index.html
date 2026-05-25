@@ -38,6 +38,11 @@
         .task-actions { display: flex; gap: 0.5rem; }
         .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25); }
         .task-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .task-title a { color: inherit; text-decoration: none; transition: color .2s; }
+        .task-title a:hover { color: var(--primary-color); text-decoration: underline; }
+        .task-card { cursor: pointer; }
+        .task-card .card-body { pointer-events: none; }
+        .task-card .card-body .task-actions button, .task-card .card-body .task-title a { pointer-events: auto; }
         .task-description { color: #495057; font-size: 0.95rem; margin-bottom: 0.75rem; }
         .assignee-badge { background-color: #e9ecef; color: #495057; padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.85rem; }
         .search-box { position: relative; }
@@ -383,11 +388,12 @@
 
             const taskHtml = filtered.map(task => {
                 const statusClass = task.status === 'completed' ? 'status-completed' : task.status === 'in-progress' ? 'status-in-progress' : 'status-pending';
-                return `<div class="card task-card">
+                const cardId = task.id;
+                return `<div class="card task-card" data-task-id="${cardId}" onclick="window.location.href='/task_detail.html?id=${cardId}'">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6 class="task-title mb-1">${escapeHtml(task.title)}</h6>
+                                <h6 class="task-title mb-1"><a href="/task_detail.html?id=${task.id}">${escapeHtml(task.title)}</a></h6>
                                 <p class="task-description mb-2">${escapeHtml(task.description || '暂无描述')}</p>
                                 <div class="d-flex flex-wrap gap-2 mb-3">
                                     ${task.assignee ? `<span class="assignee-badge"><i class="fas fa-user me-1"></i>${escapeHtml(task.assignee)}</span>` : ''}
@@ -398,8 +404,9 @@
                             <div class="text-end">
                                 <small class="text-muted d-block mb-1">${new Date(task.created_at).toLocaleString('zh-CN')}</small>
                                 <div class="task-actions">
-                                    <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${task.id}"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${task.id}"><i class="fas fa-trash"></i></button>
+                                    <a href="/task_detail.html?id=${task.id}" class="btn btn-sm btn-outline-info" title="查看详情"><i class="fas fa-external-link-alt"></i></a>
+                                    <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${task.id}" title="编辑"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${task.id}" title="删除"><i class="fas fa-trash"></i></button>
                                 </div>
                             </div>
                         </div>
