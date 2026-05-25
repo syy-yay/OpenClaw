@@ -7,52 +7,84 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #4a6fa5;
-            --primary-dark: #2c3e50;
-            --light-bg: #f5f7fa;
-        }
+        :root { --primary: #4a6fa5; --primary-dark: #2c3e50; --light-bg: #f5f7fa; }
         body { background: var(--light-bg); font-family: 'Segoe UI', system-ui, sans-serif; }
-        .page-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: #fff; padding: 2.5rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
+        .page-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 2.5rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
         .section-icon { font-size: 2rem; color: var(--primary); }
-        .role-card {
-            text-align: center; padding: 1.5rem;
-            transition: transform .3s, box-shadow .3s;
-        }
+        .role-card { text-align: center; padding: 1.5rem; transition: transform .3s, box-shadow .3s; }
         .role-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .role-icon {
-            width: 64px; height: 64px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 1rem; font-size: 1.5rem;
-        }
-        .tech-badge {
-            display: inline-block; padding: .35rem .85rem;
-            border-radius: 20px; font-size: .85rem; font-weight: 500;
-            margin: .2rem; background: #e9ecef; color: #495057;
-        }
+        .role-icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 1.5rem; }
+        .tech-badge { display: inline-block; padding: .35rem .85rem; border-radius: 20px; font-size: .85rem; font-weight: 500; margin: .2rem; background: #e9ecef; color: #495057; }
+        .auth-link { color: rgba(255,255,255,.85); text-decoration: none; padding: .35rem .85rem; border-radius: 20px; font-size: .9rem; transition: all .2s; }
+        .auth-link:hover { color: #fff; background: rgba(255,255,255,.15); }
+        .auth-link-primary { background: rgba(255,255,255,.2); }
+        .user-avatar-sm { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e9ecef; display: inline-flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 700; font-size: .9rem; }
+        .dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: .4rem; min-width: 140px; }
+        .dropdown-item { border-radius: 8px; padding: .45rem .85rem; font-size: .9rem; }
+        .dropdown-item:hover { background: #f0f4ff; }
+        .dropdown-item.text-danger:hover { background: #fff0f0; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .4rem; }
+        .status-dot.online { background: #28a745; }
+        .status-dot.offline { background: #dc3545; }
+        .status-dot.checking { background: #ffc107; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+        .stat-box { text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; }
+        .stat-box .num { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-box .lbl { font-size: .8rem; color: #888; }
     </style>
 </head>
 <body>
 
 <header class="page-header">
     <div class="container">
-        <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
                 <h1 class="mb-1"><i class="fas fa-info-circle me-2"></i>关于我们</h1>
                 <p class="mb-0 opacity-75">了解团队任务管理系统背后的故事</p>
             </div>
-            <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
-                <i class="fas fa-arrow-left me-1"></i>返回首页
-            </a>
+            <div class="d-flex align-items-center gap-2">
+                <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
+                <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
+                    <i class="fas fa-arrow-left me-1"></i>返回首页
+                </a>
+            </div>
         </div>
     </div>
 </header>
 
 <div class="container my-4">
+
+    <!-- 实时状态 -->
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <i class="fas fa-heartbeat section-icon" style="color:#28a745;"></i>
+                <h4 class="mb-0">系统状态</h4>
+            </div>
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <div class="stat-box">
+                        <div class="num" id="status-api"><span class="status-dot checking"></span>检测中…</div>
+                        <div class="lbl">API 服务</div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="stat-box">
+                        <div class="num" id="status-tasks">-</div>
+                        <div class="lbl">总任务数</div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="stat-box">
+                        <div class="num" id="status-users">-</div>
+                        <div class="lbl">注册用户</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-muted small" id="status-uptime"></div>
+        </div>
+    </div>
 
     <!-- 系统简介 -->
     <div class="card mb-4">
@@ -63,7 +95,7 @@
             </div>
             <p class="text-muted mb-0" style="line-height:1.8;font-size:1.05rem;">
                 一套轻量、高效的团队协作工具，帮助团队清晰管理任务、追踪进度、高效沟通。
-                支持任务创建与分配、实时进度追踪、成员评论协作、个人资料管理等核心功能，
+                支持任务创建与分配、实时进度追踪、成员评论协作、附件上传下载、个人资料管理等核心功能，
                 让团队协作更透明、更有序。
             </p>
         </div>
@@ -74,38 +106,23 @@
     <div class="row g-4 mb-4">
         <div class="col-md-4">
             <div class="card role-card h-100">
-                <div class="role-icon" style="background:#e3f2fd;color:#1e88e5;">
-                    <i class="fas fa-server"></i>
-                </div>
+                <div class="role-icon" style="background:#e3f2fd;color:#1e88e5;"><i class="fas fa-server"></i></div>
                 <h5>后端开发</h5>
-                <p class="text-muted small mb-0">
-                    负责 API 接口设计、数据库建模、业务逻辑实现、
-                    用户认证与会话管理、数据持久化与部署运维
-                </p>
+                <p class="text-muted small mb-0">API 接口设计、数据库建模、JWT 认证、业务逻辑实现、数据持久化与部署运维</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card role-card h-100">
-                <div class="role-icon" style="background:#fce4ec;color:#e91e63;">
-                    <i class="fas fa-paint-brush"></i>
-                </div>
+                <div class="role-icon" style="background:#fce4ec;color:#e91e63;"><i class="fas fa-paint-brush"></i></div>
                 <h5>UI/UX 设计师</h5>
-                <p class="text-muted small mb-0">
-                    负责界面视觉设计、用户体验优化、设计规范制定、
-                    交互原型制作、确保产品美观且易用
-                </p>
+                <p class="text-muted small mb-0">界面视觉设计、用户体验优化、响应式布局、交互原型制作，确保产品美观易用</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card role-card h-100">
-                <div class="role-icon" style="background:#e8f5e9;color:#43a047;">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                </div>
+                <div class="role-icon" style="background:#e8f5e9;color:#43a047;"><i class="fas fa-cloud-upload-alt"></i></div>
                 <h5>DevOps</h5>
-                <p class="text-muted small mb-0">
-                    负责 CI/CD 流水线搭建、Docker 镜像构建与推送、
-                    Kubernetes 集群部署、代码扫描与安全检测
-                </p>
+                <p class="text-muted small mb-0">CI/CD 流水线、Docker 镜像构建与推送、Kubernetes 部署、Trivy 安全扫描、SonarQube 代码质量</p>
             </div>
         </div>
     </div>
@@ -120,6 +137,7 @@
             <div>
                 <span class="tech-badge"><i class="fab fa-python me-1"></i>Python Flask</span>
                 <span class="tech-badge"><i class="fas fa-database me-1"></i>SQLite</span>
+                <span class="tech-badge"><i class="fas fa-jwt me-1"></i>JWT 认证</span>
                 <span class="tech-badge"><i class="fab fa-html5 me-1"></i>HTML5</span>
                 <span class="tech-badge"><i class="fab fa-css3-alt me-1"></i>CSS3</span>
                 <span class="tech-badge"><i class="fab fa-js me-1"></i>JavaScript</span>
@@ -128,6 +146,7 @@
                 <span class="tech-badge"><i class="fas fa-network-wired me-1"></i>Kubernetes</span>
                 <span class="tech-badge"><i class="fab fa-github me-1"></i>GitHub</span>
                 <span class="tech-badge"><i class="fas fa-shield-alt me-1"></i>Trivy</span>
+                <span class="tech-badge"><i class="fas fa-chart-line me-1"></i>SonarQube</span>
             </div>
         </div>
     </div>
@@ -135,13 +154,121 @@
     <!-- 版本信息 -->
     <div class="card">
         <div class="card-body p-4 text-center text-muted">
-            <i class="fas fa-tag me-1"></i>
-            <span>v2.0.0 · 持续迭代中 · </span>
-            <i class="far fa-copyright me-1"></i>
-            <span>2026 Team Task Manager</span>
+            <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                <span><i class="fas fa-tag me-1"></i>版本 <span id="version-info">v2.1.0</span></span>
+                <span><i class="fas fa-code-branch me-1"></i>commit <code id="commit-hash" style="font-size:.85rem;background:#e9ecef;padding:.15rem .4rem;border-radius:4px;">loading</code></span>
+                <span><i class="far fa-copyright me-1"></i>2026 Team Task Manager</span>
+            </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ========== Auth ========== */
+let currentUser = null;
+function getToken() { return localStorage.getItem('jwt_token'); }
+function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
+function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderAuthControls() {
+    const container = document.getElementById('auth-controls');
+    if (!container) return;
+    const user = currentUser || getUser();
+    if (user) {
+        const initial = (user.username || 'U')[0].toUpperCase();
+        container.innerHTML = `
+            <div class="dropdown">
+                <button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;">
+                    <span class="user-avatar-sm">${escHtml(initial)}</span>
+                    <span>${escHtml(user.username)}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
+                </ul>
+            </div>`;
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
+    } else {
+        container.innerHTML = `<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>`;
+    }
+}
+
+async function checkAuth() {
+    const token = getToken();
+    if (!token) { currentUser = null; renderAuthControls(); return; }
+    try {
+        const r = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (r.ok) {
+            const data = await r.json();
+            if (data.authenticated) { currentUser = data.user; }
+            else { clearAuth(); }
+        } else { clearAuth(); }
+    } catch(e) {}
+    renderAuthControls();
+}
+
+async function logout() {
+    const token = getToken();
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {} }); } catch(e) {}
+    clearAuth(); renderAuthControls(); window.location.href = '/';
+}
+
+/* ========== 系统状态检测 ========== */
+async function checkSystemStatus() {
+    const statusEl = document.getElementById('status-api');
+    const tasksEl = document.getElementById('status-tasks');
+    const usersEl = document.getElementById('status-users');
+    const uptimeEl = document.getElementById('status-uptime');
+
+    // API 健康检查
+    const token = getToken();
+    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    const apiOk = document.getElementById('status-api');
+
+    try {
+        const r = await fetch('/api/tasks', { headers });
+        if (r.ok) {
+            statusEl.innerHTML = '<span class="status-dot online"></span>运行正常';
+            const tasks = await r.json();
+            tasksEl.textContent = tasks.length + ' 个';
+        } else {
+            statusEl.innerHTML = '<span class="status-dot offline"></span>响应异常 (HTTP ' + r.status + ')';
+            tasksEl.textContent = '-';
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span class="status-dot offline"></span>无法连接';
+        tasksEl.textContent = '-';
+    }
+
+    // 用户数
+    try {
+        const r = await fetch('/api/auth/me', { headers });
+        if (r.ok) {
+            const data = await r.json();
+            if (data.authenticated) currentUser = data.user;
+            usersEl.textContent = '已认证';
+        } else {
+            usersEl.textContent = '请登录';
+        }
+    } catch(e) {
+        usersEl.textContent = '-';
+    }
+
+    // commit hash from page meta or hardcoded
+    document.getElementById('commit-hash').textContent = '71e42ca';
+
+    // uptime
+    const now = new Date();
+    uptimeEl.textContent = '数据更新于 ' + now.toLocaleTimeString('zh-CN');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    checkSystemStatus();
+});
+</script>
 </body>
 </html>
