@@ -426,7 +426,13 @@
 
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 路由守卫：检查登录态
+            await checkAuth();
+            if (!currentUser && !getUser()) {
+                window.location.href = '/login';
+                return;
+            }
             document.getElementById('task-title').focus();
             fetchTasks();
             setInterval(fetchTasks, 30000);
