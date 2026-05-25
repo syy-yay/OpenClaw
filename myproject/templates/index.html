@@ -43,6 +43,16 @@
         .task-card { cursor: pointer; }
         .task-card .card-body { pointer-events: none; }
         .task-card .card-body .task-actions button, .task-card .card-body .task-title a { pointer-events: auto; }
+        .task-card.border-overdue { border-left: 4px solid #dc3545 !important; }
+        .task-card.border-due-today { border-left: 4px solid #fd7e14 !important; }
+        .task-card.border-due-soon { border-left: 4px solid #ffc107 !important; }
+        .task-card.border-fine { border-left: 4px solid #28a745 !important; }
+        .task-card.border-pending { border-left: 4px solid transparent !important; }
+        .task-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .quick-status-dropdown { position: absolute; right: .75rem; bottom: .75rem; z-index: 5; }
+        .quick-status-dropdown .btn { padding: 0; width: 28px; height: 28px; border-radius: 50%; font-size: .75rem; }
+        .quick-status-dropdown .dropdown-menu { min-width: 110px; font-size: .85rem; }
+        .task-card { position: relative; }
         .task-description { color: #495057; font-size: 0.95rem; margin-bottom: 0.75rem; }
         .assignee-badge { background-color: #e9ecef; color: #495057; padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.85rem; }
         .search-box { position: relative; }
@@ -389,7 +399,14 @@
             const taskHtml = filtered.map(task => {
                 const statusClass = task.status === 'completed' ? 'status-completed' : task.status === 'in-progress' ? 'status-in-progress' : 'status-pending';
                 const cardId = task.id;
-                return `<div class="card task-card" data-task-id="${cardId}" onclick="window.location.href='/task_detail.html?id=${cardId}'">
+                                let borderClass = 'border-pending';
+                if (task.days_remaining !== null) {
+                    if (task.days_remaining < 0) borderClass = 'border-overdue';
+                    else if (task.days_remaining === 0) borderClass = 'border-due-today';
+                    else if (task.days_remaining <= 2) borderClass = 'border-due-soon';
+                    else borderClass = 'border-fine';
+                }
+                return `<div class="card task-card ${borderClass}" data-task-id="${cardId}" onclick="window.location.href='/task_detail.html?id=${cardId}'">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
@@ -419,6 +436,19 @@
   ${task.days_remaining < 0 ? `<span class="overdue-badge"><i class="fas fa-exclamation-triangle me-1"></i>已超期 ${-task.days_remaining} 天</span>` : task.days_remaining === 0 ? `<span class="due-today-badge"><i class="far fa-clock me-1"></i>今天截止</span>` : task.days_remaining <= 2 ? `<span class="due-soon-badge"><i class="far fa-clock me-1"></i>剩余 ${task.days_remaining} 天</span>` : `<small class="text-muted"><i class="far fa-calendar-alt me-1"></i>剩余 ${task.days_remaining} 天</small>`}
   <div class="due-progress flex-grow-1"><div class="due-progress-bar" style="width:${Math.min(100, Math.max(0, 100 - task.days_remaining * 10))}%;background:${task.days_remaining < 0 ? '#dc3545' : task.days_remaining <= 2 ? '#ffc107' : '#28a745'}"></div></div>
 </div>` : ''}
+                    </div>
+                    <!-- 快速状态切换 -->
+                    <div class="quick-status-dropdown">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="快速切换状态" onclick="event.stopPropagation();">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><button class="dropdown-item quick-status-btn" data-id="${cardId}" data-status="pending" onclick="event.stopPropagation();"><i class="far fa-clock me-2"></i>待处理</button></li>
+                                <li><button class="dropdown-item quick-status-btn" data-id="${cardId}" data-status="in-progress" onclick="event.stopPropagation();"><i class="fas fa-sync-alt me-2"></i>进行中</button></li>
+                                <li><button class="dropdown-item quick-status-btn" data-id="${cardId}" data-status="completed" onclick="event.stopPropagation();"><i class="fas fa-check-circle me-2"></i>已完成</button></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
