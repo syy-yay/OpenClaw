@@ -143,9 +143,10 @@
                             <label for="task-description" class="form-label">任务描述</label>
                             <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
                         </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>保存任务</button>
+                        <div class="col-12" id="form-buttons">
+                            <button type="submit" class="btn btn-primary" id="form-submit-btn"><i class="fas fa-save me-2"></i>保存任务</button>
                             <button type="button" class="btn btn-secondary ms-2" id="reset-form"><i class="fas fa-undo me-2"></i>重置表单</button>
+                            <button type="button" class="btn btn-warning ms-2 d-none" id="cancel-edit-btn"><i class="fas fa-times me-2"></i>取消编辑</button>
                         </div>
                     </div>
                 </form>
@@ -280,31 +281,81 @@
 
         resetFormBtn.addEventListener('click', function() { taskForm.reset(); document.getElementById('task-title').focus(); });
 
+        // ==================== 表单提交（统一创建/编辑） ====================
+        let editingTaskId = null;
+
+        function getFormData() {
+            const title = document.getElementById('task-title').value.trim();
+            const description = document.getElementById('task-description').value.trim();
+            const assignee = document.getElementById('task-assignee').value.trim();
+            const status = document.getElementById('task-status').value;
+            const priority = document.getElementById('task-priority').value;
+            const due_date = document.getElementById('task-due-date').value || null;
+            return { title, description, assignee, status, priority, due_date };
+        }
+
+        function resetEditMode() {
+            editingTaskId = null;
+            taskForm.reset();
+            document.getElementById('task-title').focus();
+            document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-save me-2"></i>保存任务';
+            document.getElementById('cancel-edit-btn').classList.add('d-none');
+            createForm.style.display = 'block';
+        }
+
+        function enterEditMode(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            editingTaskId = taskId;
+            const fd = getFormData();
+            document.getElementById('task-title').value = task.title;
+            document.getElementById('task-description').value = task.description || '';
+            document.getElementById('task-assignee').value = task.assignee || '';
+            document.getElementById('task-status').value = task.status;
+            document.getElementById('task-priority').value = task.priority || 'medium';
+            document.getElementById('task-due-date').value = task.due_date || '';
+            document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-pen me-2"></i>更新任务';
+            document.getElementById('cancel-edit-btn').classList.remove('d-none');
+            createForm.style.display = 'block';
+            document.getElementById('toggle-form').innerHTML = '<i class="fas fa-chevron-down me-1"></i>展开';
+            createForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
         taskForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const formData = {
-                title: document.getElementById('task-title').value.trim(),
-                description: document.getElementById('task-description').value.trim(),
-                assignee: document.getElementById('task-assignee').value.trim(),
-                status: document.getElementById('task-status').value,
-                priority: document.getElementById('task-priority').value
-            };
+            const formData = getFormData();
             if (!formData.title) { alert('请填写任务标题！'); return; }
-            try {
-                const response = await fetch('/api/tasks', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                if (response.ok) {
-                    const newTask = await response.json();
-                    tasks.unshift(newTask);
-                    renderTasks();
-                    taskForm.reset();
-                    document.getElementById('task-title').focus();
-                    showToast('任务创建成功！', 'success');
-                } else { throw new Error('创建任务失败'); }
-            } catch (error) { showToast('创建任务失败，请重试！', 'error'); }
+
+            if (editingTaskId) {
+                // 编辑模式 → PUT
+                try {
+                    const r = await fetch('/api/tasks/' + editingTaskId, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
+                    });
+                    if (r.ok) {
+                        const updated = await r.json();
+                        const idx = tasks.findIndex(t => t.id === editingTaskId);
+                        if (idx !== -1) tasks[idx] = updated;
+                        renderTasks(); resetEditMode(); showToast('任务更新成功！', 'success');
+                    } else { throw new Error('更新失败'); }
+                } catch(e) { showToast('更新任务失败！', 'error'); }
+            } else {
+                // 创建模式 → POST
+                try {
+                    const r = await fetch('/api/tasks', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
+                    });
+                    if (r.ok) {
+                        const newTask = await r.json();
+                        tasks.unshift(newTask); renderTasks(); taskForm.reset();
+                        document.getElementById('task-title').focus();
+                        showToast('任务创建成功！', 'success');
+                    } else { throw new Error('创建失败'); }
+                } catch(e) { showToast('创建任务失败！', 'error'); }
+            }
         });
+
+        document.getElementById('cancel-edit-btn').addEventListener('click', resetEditMode);
 
         async function fetchTasks() {
             try {
@@ -360,7 +411,7 @@
                 </div>`;
             }).join('');
             tasksContainer.innerHTML = taskHtml;
-            document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', function() { editTask(parseInt(this.getAttribute('data-id'))); }));
+            document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', function() { enterEditMode(parseInt(this.getAttribute('data-id'))); }));
             document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', function() { deleteTask(parseInt(this.getAttribute('data-id'))); }));
             updateStats();
         }
@@ -377,32 +428,7 @@
             taskCountEl.textContent = total;
         }
 
-        function editTask(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return;
-            document.getElementById('task-title').value = task.title;
-            document.getElementById('task-description').value = task.description || '';
-            document.getElementById('task-assignee').value = task.assignee || '';
-            document.getElementById('task-status').value = task.status;
-            document.getElementById('task-priority').value = task.priority || 'medium';
-            document.getElementById('task-due-date').value = task.due_date || '';
-            createForm.scrollIntoView({ behavior: 'smooth' });
-            taskForm.onsubmit = async function(e) {
-                e.preventDefault();
-                const fd = { title: document.getElementById('task-title').value.trim(), description: document.getElementById('task-description').value.trim(), assignee: document.getElementById('task-assignee').value.trim(), status: document.getElementById('task-status').value, priority: document.getElementById('task-priority').value };
-                if (!fd.title) { alert('请填写任务标题！'); return; }
-                try {
-                    const response = await fetch('/api/tasks/' + taskId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fd) });
-                    if (response.ok) {
-                        const updatedTask = await response.json();
-                        const index = tasks.findIndex(t => t.id === taskId);
-                        if (index !== -1) tasks[index] = updatedTask;
-                        renderTasks(); taskForm.reset(); document.getElementById('task-title').focus();
-                        taskForm.onsubmit = null; showToast('任务更新成功！', 'success');
-                    } else { throw new Error('更新失败'); }
-                } catch (error) { showToast('更新任务失败，请重试！', 'error'); }
-            };
-        }
+
 
         async function deleteTask(taskId) {
             if (!confirm('确定要删除这个任务吗？')) return;
