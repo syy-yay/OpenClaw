@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -66,11 +67,37 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
     avatar_url = db.Column(db.String(500), nullable=True, default=None)
+    phone = db.Column(db.String(20), unique=True, nullable=True)
     role = db.Column(db.String(20), default='user')
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    @classmethod
+    def find_by_identity(cls, identity):
+        if not identity:
+            return None
+        import re
+        if re.match(r'^1[3-9]\d{9}$', identity.strip()):
+            return cls.query.filter_by(phone=identity.strip()).first()
+        if '@' in identity:
+            return cls.query.filter_by(email=identity.lower().strip()).first()
+        return cls.query.filter_by(username=identity.strip()).first()
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
 
     def to_dict(self, full=False):
         d = {

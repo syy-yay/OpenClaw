@@ -1,0 +1,4 @@
+*.db
+instance/
+pycache/
+.git

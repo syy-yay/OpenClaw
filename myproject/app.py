@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """团队任务管理系统 - 后端主程序（开放访问版）"""
+import os, re, time
+from datetime import datetime, timedelta, date
+from functools import wraps
+
+import jwt
 from flask import Flask, request, jsonify, render_template
 from models import db, Task, User, Tag, task_tags, Comment, Note
-import os
-from datetime import datetime, timedelta, date
-import re
 
 
 def create_app():
@@ -13,16 +15,131 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+    # JWT 配置
+    JWT_SECRET = os.environ.get('JWT_SECRET', 'jwt-secret-change-in-production')
+    JWT_ALGORITHM = 'HS256'
+    JWT_EXPIRATION_HOURS = 24
+
     db.init_app(app)
 
     # ==================== 数据库初始化 ====================
     with app.app_context():
         db.create_all()
 
+        # 创建默认管理员（首次运行）
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', email='admin@example.com', role='admin')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+
     # ==================== 页面路由 ====================
     @app.route('/')
     def index():
         return render_template('index.html')
+
+    # ==================== JWT 辅助函数 ====================
+    def generate_token(user_id):
+        payload = {
+            'user_id': user_id,
+            'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
+            'iat': datetime.utcnow(),
+        }
+        return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+    def verify_token(token):
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            return payload['user_id']
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            return None
+
+    def login_required(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            auth = request.headers.get('Authorization', '')
+            if not auth.startswith('Bearer '):
+                return jsonify({'error': '未提供认证令牌'}), 401
+            token = auth[7:]
+            user_id = verify_token(token)
+            if not user_id:
+                return jsonify({'error': '令牌无效或已过期'}), 401
+            user = User.query.get(user_id)
+            if not user or not user.is_active:
+                return jsonify({'error': '用户不存在或已禁用'}), 401
+            request.current_user = user
+            return f(*args, **kwargs)
+        return decorated
+
+    # ==================== 认证 API ====================
+    @app.route('/api/auth/register', methods=['POST'])
+    def register():
+        data = request.get_json() or {}
+        username = (data.get('username') or '').strip()
+        password = data.get('password', '')
+        email = (data.get('email') or '').strip().lower()
+
+        if not username or not password or not email:
+            return jsonify({'success': False, 'message': '用户名、密码和邮箱不能为空'}), 400
+
+        if len(username) < 3 or len(username) > 20:
+            return jsonify({'success': False, 'message': '用户名长度必须在3-20个字符之间'}), 400
+
+        if len(password) < 6:
+            return jsonify({'success': False, 'message': '密码长度至少6位'}), 400
+
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+            return jsonify({'success': False, 'message': '邮箱格式不正确'}), 400
+
+        if User.query.filter_by(username=username).first():
+            return jsonify({'success': False, 'message': '用户名已存在'}), 400
+
+        if User.query.filter_by(email=email).first():
+            return jsonify({'success': False, 'message': '邮箱已被使用'}), 400
+
+        try:
+            user = User(username=username, email=email, role='user')
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            token = generate_token(user.id)
+            return jsonify({
+                'success': True, 'message': '注册成功',
+                'token': token,
+                'user': user.to_dict()
+            }), 201
+        except Exception:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': '注册失败，请稍后重试'}), 500
+
+    @app.route('/api/auth/login', methods=['POST'])
+    def login():
+        data = request.get_json() or {}
+        identity = (data.get('identity') or '').strip()
+        password = data.get('password', '')
+
+        if not identity or not password:
+            return jsonify({'success': False, 'message': '请输入账号和密码'}), 400
+
+        user = User.find_by_identity(identity)
+        if not user or not user.check_password(password) or not user.is_active:
+            return jsonify({'success': False, 'message': '账号或密码错误'}), 401
+
+        token = generate_token(user.id)
+        return jsonify({
+            'success': True, 'message': '登录成功',
+            'token': token,
+            'user': user.to_dict()
+        })
+
+    @app.route('/api/auth/logout', methods=['POST'])
+    def logout():
+        return jsonify({'success': True, 'message': '已退出登录'})
+
+    @app.route('/api/auth/me', methods=['GET'])
+    @login_required
+    def auth_me():
+        return jsonify({'authenticated': True, 'user': request.current_user.to_dict(full=True)})
 
     # ==================== 任务 API ====================
     @app.route('/api/tasks', methods=['GET'])
