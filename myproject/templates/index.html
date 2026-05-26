@@ -436,6 +436,24 @@
                 if (response.ok) {
                     tasks = await response.json();
                     renderTasks();
+                    // 更新负责人过滤按钮
+                    const assignees = [...new Set(tasks.filter(t => t.assignee).map(t => t.assignee))];
+                    const assigneeBar = document.querySelector('[data-filter-assignee]')?.parentElement;
+                    if (assigneeBar) {
+                        const currentVal = document.querySelector('[data-filter-assignee].active')?.getAttribute('data-filter-assignee') || 'all';
+                        assigneeBar.innerHTML = '<span class="text-muted small me-1"><i class="fas fa-user me-1"></i>负责人：</span>' +
+                            '<button class="filter-btn' + (currentVal === 'all' ? ' active' : '') + '" data-filter-assignee="all">全部</button>' +
+                            '<button class="filter-btn' + (currentVal === 'unassigned' ? ' active' : '') + '" data-filter-assignee="unassigned">未分配</button>' +
+                            assignees.map(a => '<button class="filter-btn' + (currentVal === a ? ' active' : '') + '" data-filter-assignee="' + a + '">' + escapeHtml(a) + '</button>').join('');
+                        document.querySelectorAll('[data-filter-assignee]').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                document.querySelectorAll('[data-filter-assignee]').forEach(b => b.classList.remove('active'));
+                                this.classList.add('active');
+                                assigneeFilter = this.getAttribute('data-filter-assignee');
+                                renderTasks();
+                            });
+                        });
+                    }
                     // 更新依赖任务下拉框
                     const $dep = document.getElementById('task-depends-on');
                     if ($dep) {
@@ -453,6 +471,14 @@
             let filtered = searchQuery
                 ? tasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
                 : tasks;
+            // 负责人过滤
+            if (assigneeFilter && assigneeFilter !== 'all') {
+                if (assigneeFilter === 'unassigned') {
+                    filtered = filtered.filter(t => !t.assignee);
+                } else {
+                    filtered = filtered.filter(t => t.assignee === assigneeFilter);
+                }
+            }
             // 排序
             const priOrder = { high: 3, medium: 2, low: 1 };
             const statusOrder = { pending: 0, 'in-progress': 1, completed: 2 };

@@ -244,7 +244,9 @@ function renderGantt() {
             bar.style.left = barLeft + 'px';
             bar.style.width = barWidth + 'px';
             bar.style.background = statusColors[task.status] || '#4a6fa5';
-            bar.title = task.title + ' | ' + (task.progress_pct || 0) + '%';
+            // 边框颜色根据状态微调
+            if (task.status === 'pending') bar.style.border = '1px solid rgba(255,255,255,.3)';
+            bar.title = task.title + '\n状态: ' + (task.status === 'completed' ? '已完成' : task.status === 'in-progress' ? '进行中' : '待处理') + ' | 进度: ' + (task.progress_pct || 0) + '%' + (task.assignee ? '\n负责人: ' + task.assignee : '') + (task.priority ? '\n优先级: ' + ({high:'高',medium:'中',low:'低'}[task.priority] || task.priority) : '') + (task.start_date ? '\n开始: ' + task.start_date : '') + (task.due_date ? '\n截止: ' + task.due_date : '');
             bar.onclick = () => window.location.href = '/task_detail.html?id=' + task.id;
 
             // Progress bar inside
@@ -256,8 +258,11 @@ function renderGantt() {
                 bar.appendChild(prog);
             }
 
-            if (barWidth > 40) {
-                bar.textContent = task.title.substring(0, Math.floor(barWidth / 8));
+            // 始终显示任务标题缩写（最少2个字）
+            const maxChars = Math.max(2, Math.floor(barWidth / 9));
+            bar.textContent = task.title.substring(0, maxChars);
+            if (barWidth > maxChars * 9 + 16) {
+                bar.textContent = task.title.substring(0, maxChars);
             }
 
             tlArea.appendChild(bar);
