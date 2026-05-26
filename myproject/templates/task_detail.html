@@ -557,7 +557,8 @@ async function saveEditNote(e) {
 }
 
 async function deleteNote(noteId) {
-    if (!confirm('确定删除这条备注？')) return;
+    const noteText = document.querySelector('.note-item[data-id="' + noteId + '"] .note-content')?.textContent?.trim()?.substring(0, 30) || '';
+    if (!confirm('确定删除"' + (noteText || '这条备注') + '"?')) return;
     const taskId = getTaskId();
     try {
         const r = await fetch(`/api/tasks/${taskId}/notes/${noteId}`, { method: 'DELETE' });
