@@ -396,6 +396,10 @@ function renderTask(task) {
             <div class="progress-bar ${barColor}" role="progressbar" style="width:${pct}%" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
         <small class="text-muted">进度 ${pct}%</small>
+        ${task.depends_on_id ? `
+        <div class="mt-2 small text-muted">
+            <i class="fas fa-link me-1"></i>依赖任务 <a href="/task_detail.html?id=${task.depends_on_id}" class="text-decoration-none fw-semibold">#${task.depends_on_id}</a>
+        </div>` : ''}
     `;
 }
 
