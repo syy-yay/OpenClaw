@@ -97,7 +97,11 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
-                <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
+                <div id="prev-next-nav" class="d-flex gap-1">
+                <button class="btn btn-outline-light btn-sm rounded-pill" id="prev-task-btn" title="上一个任务" style="display:none;"><i class="fas fa-chevron-left"></i></button>
+                <button class="btn btn-outline-light btn-sm rounded-pill" id="next-task-btn" title="下一个任务" style="display:none;"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <a href="/" class="btn btn-outline-light btn-sm rounded-pill">
                     <i class="fas fa-arrow-left me-1"></i>返回列表
                 </a>
             </div>
@@ -720,6 +724,15 @@ document.addEventListener('DOMContentLoaded', function() {
     loadComments(taskId);
     loadNotes(taskId);
     loadAttachments(taskId);
+    // 加载全部任务列表用于前后导航
+    fetch('/api/tasks').then(r => r.json()).then(all => {
+        const ids = all.map(t => t.id);
+        const idx = ids.indexOf(taskId);
+        document.getElementById('prev-task-btn').style.display = idx > 0 ? 'inline-block' : 'none';
+        document.getElementById('next-task-btn').style.display = idx < ids.length - 1 ? 'inline-block' : 'none';
+        if (idx > 0) document.getElementById('prev-task-btn').onclick = () => window.location.href = '/task_detail.html?id=' + ids[idx - 1];
+        if (idx < ids.length - 1) document.getElementById('next-task-btn').onclick = () => window.location.href = '/task_detail.html?id=' + ids[idx + 1];
+    }).catch(() => {});
 });
 </script>
 </body>
