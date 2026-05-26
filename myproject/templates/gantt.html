@@ -199,6 +199,7 @@ function renderGantt() {
     tasks.forEach((task, idx) => {
         const row = document.createElement('div');
         row.className = 'gantt-row';
+        row.setAttribute('data-task-id', task.id);
         row.style.width = '100%';
 
         // Task name
