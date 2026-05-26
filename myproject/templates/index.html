@@ -209,6 +209,7 @@
                         <option value="priority_asc">优先级 ↑</option>
                         <option value="status">按状态</option>
                     </select>
+                    <button class="btn btn-sm btn-outline-secondary" id="export-csv-btn" title="导出CSV" onclick="exportCSV()"><i class="fas fa-download me-1"></i>导出</button>
                     <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>共 <span id="task-count">0</span> 个任务</div>
                 </div>
             </div>
@@ -699,5 +700,16 @@
             setInterval(fetchTasks, 30000);
         });
     </script>
+    <footer style="background:#f0f2f5;padding:.8rem 0;margin-top:2rem;border-top:1px solid #e0e0e0;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">&copy; 2026 团队任务管理系统</small>
+                <div class="d-flex gap-3">
+                    <a href="/about" class="text-muted text-decoration-none small"><i class="fas fa-info-circle me-1"></i>关于</a>
+                    <a href="/gantt" class="text-muted text-decoration-none small"><i class="fas fa-chart-bar me-1"></i>甘特图</a>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
