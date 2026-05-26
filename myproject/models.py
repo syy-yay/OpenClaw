@@ -24,6 +24,13 @@ class Task(db.Model):
     status = db.Column(db.String(20), default='pending')
     priority = db.Column(db.String(10), default='medium')  # high, medium, low
     due_date = db.Column(db.Date, nullable=True)  # 截止日期
+    start_date = db.Column(db.Date, nullable=True)  # 甘特图：计划开始日期
+    duration_days = db.Column(db.Integer, default=1)  # 甘特图：预计持续天数
+    progress_pct = db.Column(db.Integer, default=0)  # 甘特图：进度百分比 0-100
+    depends_on_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True)  # 前置任务
+
+    # 前置任务关系
+    depends_on = db.relationship('Task', remote_side='Task.id', backref=db.backref('dependent_tasks', lazy='dynamic'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -59,6 +66,10 @@ class Task(db.Model):
             'assignee_initial': self.assignee[0].upper() if self.assignee else None,
             'status': self.status,
             'priority': self.priority,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'duration_days': self.duration_days,
+            'progress_pct': self.progress_pct,
+            'depends_on_id': self.depends_on_id,
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'days_remaining': self.days_remaining,
             'tags': [{'id': t.id, 'name': t.name, 'color': t.color} for t in self.tags],

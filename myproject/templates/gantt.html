@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甘特图 - 团队任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #4a6fa5; --primary-dark: #2c3e50; }
+        body { background: #f5f7fa; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .page-header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 1.5rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .gantt-container { overflow-x: auto; position: relative; min-height: 400px; }
+        .gantt-header { display: flex; border-bottom: 2px solid #dee2e6; }
+        .gantt-tasklist { flex-shrink: 0; width: 260px; }
+        .gantt-timeline { flex: 1; overflow: hidden; position: relative; }
+        .gantt-row { display: flex; height: 44px; border-bottom: 1px solid #eee; align-items: center; }
+        .gantt-row:hover { background: #f8f9ff; }
+        .gantt-task-name { padding: 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .85rem; }
+        .gantt-bar { position: absolute; height: 28px; border-radius: 6px; top: 8px; cursor: pointer; transition: opacity .2s; display: flex; align-items: center; padding: 0 8px; font-size: .7rem; color: #fff; font-weight: 600; min-width: 20px; overflow: hidden; }
+        .gantt-bar:hover { opacity: .85; }
+        .gantt-week { position: absolute; top: 0; height: 100%; border-left: 1px solid #e9ecef; }
+        .gantt-week-label { position: absolute; top: -24px; font-size: .7rem; color: #888; white-space: nowrap; }
+        .gantt-today { position: absolute; top: 0; height: 100%; border-left: 2px dashed #dc3545; z-index: 5; }
+        .gantt-dependency { position: absolute; z-index: 3; pointer-events: none; }
+        .gantt-progress { height: 100%; background: rgba(0,0,0,.15); border-radius: 6px; margin-left: -8px; padding: 0 8px; }
+        .zoom-controls { display: flex; gap: .5rem; align-items: center; }
+        .legend { display: flex; gap: 1rem; font-size: .8rem; color: #666; }
+        .legend-item { display: flex; align-items: center; gap: .3rem; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        .empty-state { text-align: center; padding: 4rem 1rem; }
+        .empty-state i { font-size: 3rem; color: #ccc; margin-bottom: 1rem; }
+        @media (max-width: 768px) { .gantt-tasklist { width: 160px; } }
+    </style>
+</head>
+<body>
+<header class="page-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <a href="/" class="text-white-50 me-3"><i class="fas fa-arrow-left"></i></a>
+                <span class="fs-4 fw-semibold"><i class="fas fa-chart-bar me-2"></i>甘特图</span>
+                <span class="badge bg-light text-dark ms-2" id="task-count-badge">0 个任务</span>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#4a6fa5"></span>待处理</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span>进行中</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>已完成</span>
+                </div>
+                <div class="zoom-controls">
+                    <button class="btn btn-sm btn-outline-light" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
+                    <span class="text-white-50 small" id="zoom-level">周</span>
+                    <button class="btn btn-sm btn-outline-light" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+<div class="container mt-4 mb-5">
+    <div class="card p-3">
+        <div id="gantt-loading" class="text-center py-5">
+            <div class="spinner-border text-primary mb-3"></div>
+            <p class="text-muted">加载甘特图数据...</p>
+        </div>
+        <div id="gantt-chart" style="display:none;">
+            <div class="gantt-container" id="gantt-container">
+                <div class="gantt-header">
+                    <div class="gantt-tasklist fw-semibold small text-muted px-3 py-2">任务</div>
+                    <div class="gantt-timeline" id="gantt-timeline-header"></div>
+                </div>
+                <div id="gantt-body" style="position:relative;"></div>
+            </div>
+        </div>
+        <div id="gantt-empty" style="display:none;" class="empty-state">
+            <i class="far fa-calendar-alt"></i>
+            <h5 class="text-muted">暂无任务数据</h5>
+            <p class="text-muted">创建任务并设置开始日期后，甘特图将自动生成</p>
+            <a href="/" class="btn btn-primary"><i class="fas fa-plus me-1"></i>创建任务</a>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let dayWidth = 28;
+let tasks = [];
+let dependencies = [];
+let minDate = null, maxDate = null;
+
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+
+function formatDate(d) { return d.toISOString().split('T')[0]; }
+
+function diffDays(a, b) { return Math.round((b - a) / (1000 * 60 * 60 * 24)); }
+
+function parseISODate(s) {
+    if (!s) return null;
+    const parts = s.split('-');
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
+async function loadGantt() {
+    try {
+        const r = await fetch('/api/gantt');
+        const data = await r.json();
+        tasks = data.tasks;
+        dependencies = data.dependencies || [];
+
+        if (!tasks.length) {
+            document.getElementById('gantt-loading').style.display = 'none';
+            document.getElementById('gantt-empty').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('gantt-loading').style.display = 'none';
+        document.getElementById('gantt-chart').style.display = 'block';
+        document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
+
+        calcDateRange();
+        renderGantt();
+    } catch(e) {
+        document.getElementById('gantt-loading').innerHTML = '<div class="alert alert-danger">加载失败</div>';
+    }
+}
+
+function calcDateRange() {
+    let all = [];
+    tasks.forEach(t => {
+        if (t.start_date) all.push(parseISODate(t.start_date));
+        if (t.due_date) all.push(parseISODate(t.due_date));
+        // 如果没有设置日期，用创建时间
+        if (!t.start_date && t.created_at) all.push(new Date(t.created_at));
+    });
+    if (!all.length) { all.push(new Date()); }
+    minDate = new Date(Math.min(...all));
+    maxDate = new Date(Math.max(...all));
+    // 加一些边距
+    minDate = addDays(minDate, -3);
+    maxDate = addDays(maxDate, +14);
+    // 对齐到周一
+    minDate.setDate(minDate.getDate() - minDate.getDay() + 1);
+}
+
+function renderGantt() {
+    const container = document.getElementById('gantt-body');
+    const header = document.getElementById('gantt-timeline-header');
+    const totalDays = diffDays(minDate, maxDate) || 14;
+    const totalWidth = totalDays * dayWidth;
+
+    // Header
+    header.innerHTML = '';
+    header.style.width = totalWidth + 'px';
+    header.style.position = 'relative';
+    header.style.height = '28px';
+
+    for (let i = 0; i <= totalDays; i++) {
+        const d = addDays(minDate, i);
+        const isMonday = d.getDay() === 1;
+        const isFirst = i === 0;
+        const weekday = ['日','一','二','三','四','五','六'][d.getDay()];
+        if (isMonday || isFirst) {
+            const lbl = document.createElement('div');
+            lbl.className = 'gantt-week-label';
+            lbl.style.left = (i * dayWidth) + 'px';
+            lbl.textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + weekday;
+            header.appendChild(lbl);
+        }
+    }
+
+    // Body
+    container.innerHTML = '';
+    container.style.position = 'relative';
+    container.style.width = (260 + totalWidth) + 'px';
+
+    // Today line
+    const today = new Date();
+    const tdOffset = diffDays(minDate, today) * dayWidth;
+    if (tdOffset > 0 && tdOffset < totalWidth) {
+        const todayLine = document.createElement('div');
+        todayLine.className = 'gantt-today';
+        todayLine.style.left = (260 + tdOffset) + 'px';
+        container.appendChild(todayLine);
+    }
+
+    tasks.forEach((task, idx) => {
+        const row = document.createElement('div');
+        row.className = 'gantt-row';
+        row.style.width = '100%';
+
+        // Task name
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'gantt-task-name';
+        nameDiv.style.width = '260px';
+        const prioColor = task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢';
+        nameDiv.textContent = prioColor + ' ' + (task.title || '未命名');
+        row.appendChild(nameDiv);
+
+        // Timeline area
+        const tlArea = document.createElement('div');
+        tlArea.style.position = 'relative';
+        tlArea.style.flex = '1';
+        tlArea.style.height = '44px';
+
+        // Week gridlines
+        for (let i = 0; i <= totalDays; i++) {
+            const d = addDays(minDate, i);
+            if (d.getDay() === 1 || i === 0) {
+                const gl = document.createElement('div');
+                gl.className = 'gantt-week';
+                gl.style.left = (i * dayWidth) + 'px';
+                tlArea.appendChild(gl);
+            }
+        }
+
+        // Task bar
+        const startDate = task.start_date ? parseISODate(task.start_date) : null;
+        const dueDate = task.due_date ? parseISODate(task.due_date) : null;
+
+        if (startDate) {
+            const barLeft = diffDays(minDate, startDate) * dayWidth;
+            const duration = dueDate ? diffDays(startDate, dueDate) + 1 : (task.duration_days || 1);
+            const barWidth = Math.max(duration * dayWidth, dayWidth * 0.5);
+
+            const bar = document.createElement('div');
+            bar.className = 'gantt-bar';
+
+            const statusColors = {
+                'completed': '#28a745',
+                'in-progress': '#ffc107',
+                'pending': '#4a6fa5'
+            };
+            bar.style.left = barLeft + 'px';
+            bar.style.width = barWidth + 'px';
+            bar.style.background = statusColors[task.status] || '#4a6fa5';
+            bar.title = task.title + ' | ' + (task.progress_pct || 0) + '%';
+            bar.onclick = () => window.location.href = '/task_detail.html?id=' + task.id;
+
+            // Progress bar inside
+            const pct = task.progress_pct || 0;
+            if (pct > 0 && pct < 100) {
+                const prog = document.createElement('div');
+                prog.className = 'gantt-progress';
+                prog.style.width = pct + '%';
+                bar.appendChild(prog);
+            }
+
+            if (barWidth > 40) {
+                bar.textContent = task.title.substring(0, Math.floor(barWidth / 8));
+            }
+
+            tlArea.appendChild(bar);
+        }
+
+        row.appendChild(tlArea);
+        container.appendChild(row);
+    });
+}
+
+function zoomIn() {
+    dayWidth = Math.min(dayWidth + 8, 80);
+    renderGantt();
+    document.getElementById('zoom-level').textContent = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+}
+
+function zoomOut() {
+    dayWidth = Math.max(dayWidth - 8, 12);
+    renderGantt();
+    document.getElementById('zoom-level').textContent = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+}
+
+document.addEventListener('DOMContentLoaded', loadGantt);
+</script>
+</body>
+</html>

@@ -42,6 +42,10 @@ def create_app():
     def login_page():
         return render_template('login.html')
 
+    @app.route('/gantt')
+    def gantt_page():
+        return render_template('gantt.html')
+
     @app.route('/register')
     def register_page():
         return render_template('register.html')
@@ -185,12 +189,21 @@ def create_app():
         if priority not in ('high', 'medium', 'low'):
             return jsonify({'error': '优先级无效（high/medium/low）'}), 400
 
-        due_date = None
-        if 'due_date' in data and data['due_date']:
+        valid_date_formats = ['Y-m-d']
+
+        def _parse_date(val, field_name='date'):
+            if not val:
+                return None
             try:
-                due_date = date.fromisoformat(data['due_date'])
+                return date.fromisoformat(val)
             except (ValueError, TypeError):
-                return jsonify({'error': '日期格式无效，请使用 YYYY-MM-DD'}), 400
+                raise ValueError(f'{field_name} 格式无效，请使用 YYYY-MM-DD')
+
+        try:
+            due_date = _parse_date(data.get('due_date'), 'due_date')
+            start_date = _parse_date(data.get('start_date'), 'start_date')
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
 
         task = Task(
             title=data['title'],
@@ -199,6 +212,10 @@ def create_app():
             status=data.get('status', 'pending'),
             priority=priority,
             due_date=due_date,
+            start_date=start_date,
+            duration_days=data.get('duration_days', 1),
+            progress_pct=data.get('progress_pct', 0),
+            depends_on_id=data.get('depends_on_id'),
         )
         db.session.add(task)
         db.session.commit()
@@ -227,14 +244,26 @@ def create_app():
                 return jsonify({'error': '优先级无效（high/medium/low）'}), 400
             task.priority = data['priority']
 
+        valid_date_formats = ['Y-m-d']
+
+        def _parse_date(val, field_name='date'):
+            if not val:
+                return None
+            try:
+                return date.fromisoformat(val)
+            except (ValueError, TypeError):
+                raise ValueError(f'{field_name} 格式无效，请使用 YYYY-MM-DD')
+
         if 'due_date' in data:
-            if data['due_date']:
-                try:
-                    task.due_date = date.fromisoformat(data['due_date'])
-                except (ValueError, TypeError):
-                    return jsonify({'error': '日期格式无效，请使用 YYYY-MM-DD'}), 400
-            else:
-                task.due_date = None
+            task.due_date = _parse_date(data.get('due_date'))
+        if 'start_date' in data:
+            task.start_date = _parse_date(data.get('start_date'))
+        if 'duration_days' in data:
+            task.duration_days = data['duration_days']
+        if 'progress_pct' in data:
+            task.progress_pct = data['progress_pct']
+        if 'depends_on_id' in data:
+            task.depends_on_id = data['depends_on_id']
 
         db.session.commit()
         return jsonify(task.to_dict())
@@ -540,6 +569,40 @@ def create_app():
         if not user or not user.avatar_url:
             return jsonify({'avatar_url': None}), 404
         return jsonify({'avatar_url': user.avatar_url})
+
+    # ==================== 甘特图 API ====================
+    @app.route('/api/gantt', methods=['GET'])
+    def get_gantt_data():
+        tasks = Task.query.order_by(Task.start_date.asc().nullslast()).all()
+        # 构建依赖关系的任务ID集合（用于前端连线）
+        dependency_ids = set()
+        for t in tasks:
+            if t.depends_on_id:
+                dependency_ids.add(t.depends_on_id)
+                dependency_ids.add(t.id)
+        return jsonify({
+            'tasks': [t.to_dict() for t in tasks],
+            'dependencies': [
+                {'from_id': t.depends_on_id, 'to_id': t.id}
+                for t in tasks if t.depends_on_id
+            ],
+        })
+
+    @app.route('/api/gantt/settings', methods=['GET'])
+    def get_gantt_settings():
+        tasks = Task.query.all()
+        # 计算时间范围
+        all_dates = []
+        for t in tasks:
+            if t.start_date:
+                all_dates.append(t.start_date)
+            if t.due_date:
+                all_dates.append(t.due_date)
+        return jsonify({
+            'min_date': min(all_dates).isoformat() if all_dates else None,
+            'max_date': max(all_dates).isoformat() if all_dates else None,
+            'total_tasks': len(tasks),
+        })
     return app
 
 
