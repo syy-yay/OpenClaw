@@ -379,6 +379,7 @@ function renderTask(task) {
   ${escHtml(task.assignee)}
 </span>` : ''}
             <span class="badge bg-light text-dark px-3 py-2"><i class="far fa-calendar-alt me-1"></i>创建：${new Date(task.created_at).toLocaleString('zh-CN')}</span>
+            ${task.updated_at && task.updated_at !== task.created_at ? `<span class="badge bg-light text-dark px-3 py-2"><i class="fas fa-pen me-1"></i>更新：${new Date(task.updated_at).toLocaleString('zh-CN')}</span>` : ''}
             ${task.due_date ? `
             <span class="badge bg-light text-dark px-3 py-2"><i class="far fa-clock me-1"></i>截止：${task.due_date}</span>
             <span class="${task.days_remaining < 0 ? 'badge bg-danger' : task.days_remaining === 0 ? 'badge bg-warning text-dark' : task.days_remaining <= 2 ? 'badge bg-warning text-dark' : 'badge bg-success'}">${task.days_remaining < 0 ? '已超期 ' + (-task.days_remaining) + ' 天' : task.days_remaining === 0 ? '今天截止' : '剩余 ' + task.days_remaining + ' 天'}</span>` : ''}
