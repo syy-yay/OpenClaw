@@ -44,6 +44,7 @@
         .task-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
         .task-actions .btn { padding: .15rem .4rem; font-size: .78rem; }
         .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25); }
+        .form-control.is-invalid { border-color: #dc3545; box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25); }
         .task-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; }
         .task-title a { color: inherit; text-decoration: none; transition: color .2s; }
         .task-title a:hover { color: var(--primary-color); text-decoration: underline; }
@@ -299,7 +300,8 @@
                             <span>${escapeHtml(user.username)}</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="event.preventDefault();document.querySelector('[data-filter-assignee=mine]')?.click();return false;"><i class="fas fa-tasks me-2"></i>我的任务</a></li>
+                    <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
                         </ul>
@@ -425,7 +427,14 @@
         taskForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = getFormData();
-            if (!formData.title) { alert('请填写任务标题！'); return; }
+            if (!formData.title) {
+                document.getElementById('task-title').classList.add('is-invalid');
+                document.getElementById('task-title').focus();
+                showToast('请填写任务标题！', 'error');
+                return;
+            } else {
+                document.getElementById('task-title').classList.remove('is-invalid');
+            }
 
             if (editingTaskId) {
                 // 编辑模式 → PUT
