@@ -196,6 +196,15 @@
                         <input type="text" class="form-control form-control-sm" id="search-input" placeholder="搜索任务标题..." style="padding-left: 2.5rem;">
                         <button class="search-clear" id="search-clear">&times;</button>
                     </div>
+                    <select class="form-select form-select-sm" id="sort-select" style="width:auto;border-radius:8px;font-size:.85rem;">
+                        <option value="created_desc">最新优先</option>
+                        <option value="created_asc">最早优先</option>
+                        <option value="due_asc">截止日期 ↑</option>
+                        <option value="due_desc">截止日期 ↓</option>
+                        <option value="priority_desc">优先级 ↓</option>
+                        <option value="priority_asc">优先级 ↑</option>
+                        <option value="status">按状态</option>
+                    </select>
                     <div class="text-muted small"><i class="fas fa-info-circle me-1"></i>共 <span id="task-count">0</span> 个任务</div>
                 </div>
             </div>
@@ -293,6 +302,7 @@
         // ==================== 任务管理 ====================
         let tasks = [];
         let searchQuery = '';
+        let sortBy = 'created_desc';
 
         const taskForm = document.getElementById('task-form');
         const tasksContainer = document.getElementById('tasks-container');
@@ -398,6 +408,7 @@
         });
 
         document.getElementById('cancel-edit-btn').addEventListener('click', resetEditMode);
+        document.getElementById('sort-select')?.addEventListener('change', function() { sortBy = this.value; renderTasks(); });
 
         async function fetchTasks() {
             try {
@@ -419,9 +430,23 @@
         }
 
         function renderTasks() {
-            const filtered = searchQuery
+            let filtered = searchQuery
                 ? tasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
                 : tasks;
+            // 排序
+            const priOrder = { high: 3, medium: 2, low: 1 };
+            const statusOrder = { pending: 0, 'in-progress': 1, completed: 2 };
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case 'created_asc': return new Date(a.created_at) - new Date(b.created_at);
+                    case 'due_asc': return (a.days_remaining ?? 999) - (b.days_remaining ?? 999);
+                    case 'due_desc': return (b.days_remaining ?? -999) - (a.days_remaining ?? -999);
+                    case 'priority_desc': return (priOrder[b.priority] || 0) - (priOrder[a.priority] || 0);
+                    case 'priority_asc': return (priOrder[a.priority] || 0) - (priOrder[b.priority] || 0);
+                    case 'status': return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+                    default: return new Date(b.created_at) - new Date(a.created_at);
+                }
+            });
 
             if (filtered.length === 0) {
                 const msg = searchQuery ? `未搜索到"${escapeHtml(searchQuery)}"相关任务` : '暂无任务';
