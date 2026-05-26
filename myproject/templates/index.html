@@ -35,7 +35,8 @@
         .stats-card { text-align: center; padding: 1.5rem; }
         .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); }
         .stat-label { color: var(--secondary-color); font-size: 1rem; margin-top: 0.5rem; }
-        .task-actions { display: flex; gap: 0.5rem; }
+        .task-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+        .task-actions .btn { padding: .15rem .4rem; font-size: .78rem; }
         .form-control:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.25rem rgba(74, 111, 165, 0.25); }
         .task-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; }
         .task-title a { color: inherit; text-decoration: none; transition: color .2s; }
@@ -542,6 +543,7 @@
                                     <button class="btn btn-sm btn-outline-secondary" title="复制标题" onclick="event.stopPropagation();copyTaskTitle(${task.id})"><i class="fas fa-copy"></i></button>
                                     <a href="/task_detail.html?id=${task.id}" class="btn btn-sm btn-outline-info" title="查看详情"><i class="fas fa-external-link-alt"></i></a>
                                     <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${task.id}" title="编辑"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-success clone-btn" data-id="${task.id}" title="克隆任务" onclick="event.stopPropagation();cloneTask(${task.id})"><i class="fas fa-copy"></i></button>
                                     <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${task.id}" title="删除"><i class="fas fa-trash"></i></button>
                                 </div>
                             </div>
