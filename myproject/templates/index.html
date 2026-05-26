@@ -520,6 +520,11 @@
             let filtered = searchQuery
                 ? tasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
                 : tasks;
+            // 今日任务过滤
+            if (currentFilter === 'today') {
+                filtered = filtered.filter(t => t.days_remaining === 0);
+                currentFilter = 'all'; // 重置优先级过滤标志，但不影响UI显示
+            }
             // 负责人过滤
             if (assigneeFilter && assigneeFilter !== 'all') {
                 if (assigneeFilter === 'unassigned') {
@@ -637,6 +642,10 @@
             const inProgress = tasks.filter(t => t.status === 'in-progress').length;
             const pending = tasks.filter(t => t.status === 'pending').length;
             totalTasksEl.textContent = total;
+            // 今日任务计数
+            const todayCount = tasks.filter(t => t.days_remaining === 0).length;
+            const todayBtn = document.getElementById('filter-today');
+            if (todayBtn) todayBtn.innerHTML = '<i class="far fa-clock me-1"></i>今日' + (todayCount ? ' <span class="badge bg-danger text-white" style="font-size:.65rem;">' + todayCount + '</span>' : '');
             completedTasksEl.textContent = completed;
             inProgressTasksEl.textContent = inProgress;
             pendingTasksEl.textContent = pending;

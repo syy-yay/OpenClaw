@@ -61,6 +61,7 @@
                     <button class="btn btn-sm btn-outline-light" title="缩小" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
                     <span class="text-white-50 small" id="zoom-level">周</span>
                     <button class="btn btn-sm btn-outline-light" title="放大" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                    <button class="btn btn-sm btn-outline-light" title="跳转到今天" onclick="scrollToToday()"><i class="fas fa-crosshairs"></i></button>
                     <button class="btn btn-sm btn-outline-light" title="刷新数据" onclick="refreshGantt()"><i class="fas fa-sync-alt"></i></button>
                 </div>
                 <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
@@ -316,6 +317,16 @@ function drawDependencies() {
         }
         container.appendChild(svg);
     });
+}
+
+function scrollToToday() {
+    const container = document.getElementById('gantt-container');
+    if (!container || !minDate) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = diffDays(minDate, today);
+    const scrollX = Math.max(0, diff * dayWidth - container.offsetWidth / 2 + 260);
+    container.scrollLeft = scrollX;
 }
 
 function zoomIn() {
