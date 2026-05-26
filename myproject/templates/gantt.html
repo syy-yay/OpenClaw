@@ -209,7 +209,7 @@ function renderGantt() {
         nameDiv.style.width = '260px';
         const prioColor = task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢';
         nameDiv.textContent = prioColor + ' ' + (task.title || '未命名');
-        row.appendChild(nameDiv);
+        row.appendChild(nameLink);
 
         // Timeline area
         const tlArea = document.createElement('div');
