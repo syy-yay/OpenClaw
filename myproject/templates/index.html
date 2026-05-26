@@ -19,6 +19,9 @@
     </style>
     <style>
         :root { --primary-color: #4a6fa5; --secondary-color: #6c757d; --success-color: #28a745; --warning-color: #ffc107; --danger-color: #dc3545; --light-bg: #f8f9fa; --card-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
         body { background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .header-section { background: linear-gradient(135deg, var(--primary-color), #2c3e50); color: white; padding: 2rem 0; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .card { border-radius: 12px; box-shadow: var(--card-shadow); border: none; transition: transform 0.3s ease, box-shadow 0.3s ease; }
@@ -97,25 +100,25 @@
     <div class="container mt-4 mb-5">
         <div class="row mb-4">
             <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
+                <div class="card stats-card bg-white" style="animation:fadeInUp .35s ease both;">
                     <div class="stat-number" id="total-tasks">0</div>
                     <div class="stat-label">总任务数</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
+                <div class="card stats-card bg-white" style="animation:fadeInUp .35s ease both;">
                     <div class="stat-number text-success" id="completed-tasks">0</div>
                     <div class="stat-label">已完成</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
+                <div class="card stats-card bg-white" style="animation:fadeInUp .35s ease both;">
                     <div class="stat-number text-warning" id="in-progress-tasks">0</div>
                     <div class="stat-label">进行中</div>
                 </div>
             </div>
             <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card stats-card bg-white">
+                <div class="card stats-card bg-white" style="animation:fadeInUp .35s ease both;">
                     <div class="stat-number text-danger" id="pending-tasks">0</div>
                     <div class="stat-label">待处理</div>
                 </div>
@@ -561,7 +564,7 @@
                     else if (task.days_remaining <= 2) borderClass = 'border-due-soon';
                     else borderClass = 'border-fine';
                 }
-                return `<div class="card task-card ${borderClass}" data-task-id="${cardId}" onclick="window.location.href='/task_detail.html?id=${cardId}'">
+                return `<div class="card task-card ${borderClass}" data-task-id="${cardId}" onclick="window.location.href='/task_detail.html?id=${cardId}'" style="animation:fadeInUp .3s ease both;animation-delay:${Math.min(filtered.indexOf(task) * 0.04, 0.5)}s;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
