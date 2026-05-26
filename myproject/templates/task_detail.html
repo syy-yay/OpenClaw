@@ -382,7 +382,16 @@ function renderTask(task) {
             ${task.due_date ? `
             <span class="badge bg-light text-dark px-3 py-2"><i class="far fa-clock me-1"></i>截止：${task.due_date}</span>
             <span class="${task.days_remaining < 0 ? 'badge bg-danger' : task.days_remaining === 0 ? 'badge bg-warning text-dark' : task.days_remaining <= 2 ? 'badge bg-warning text-dark' : 'badge bg-success'}">${task.days_remaining < 0 ? '已超期 ' + (-task.days_remaining) + ' 天' : task.days_remaining === 0 ? '今天截止' : '剩余 ' + task.days_remaining + ' 天'}</span>` : ''}
+            ${task.start_date ? `<span class="badge bg-light text-dark px-3 py-2"><i class="fas fa-play me-1"></i>开始：${task.start_date}</span>` : ''}
+            ${task.duration_days ? `<span class="badge bg-light text-dark px-3 py-2"><i class="fas fa-hourglass-half me-1"></i>工期：${task.duration_days} 天</span>` : ''}
         </div>
+        ${task.progress_pct !== undefined && task.progress_pct !== null ? `
+        <div class="d-flex align-items-center gap-2 mt-2">
+            <div class="progress flex-grow-1" style="height:6px;">
+                <div class="progress-bar ${task.progress_pct >= 100 ? 'bg-success' : task.progress_pct >= 50 ? 'bg-primary' : 'bg-info'}" role="progressbar" style="width:${task.progress_pct}%"></div>
+            </div>
+            <small class="text-muted fw-semibold">${task.progress_pct}%</small>
+        </div>` : ''}
         <div class="progress mt-2">
             <div class="progress-bar ${barColor}" role="progressbar" style="width:${pct}%" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
         </div>

@@ -455,6 +455,10 @@
   ${task.days_remaining < 0 ? `<span class="overdue-badge"><i class="fas fa-exclamation-triangle me-1"></i>已超期 ${-task.days_remaining} 天</span>` : task.days_remaining === 0 ? `<span class="due-today-badge"><i class="far fa-clock me-1"></i>今天截止</span>` : task.days_remaining <= 2 ? `<span class="due-soon-badge"><i class="far fa-clock me-1"></i>剩余 ${task.days_remaining} 天</span>` : `<small class="text-muted"><i class="far fa-calendar-alt me-1"></i>剩余 ${task.days_remaining} 天</small>`}
   <div class="due-progress flex-grow-1"><div class="due-progress-bar" style="width:${Math.min(100, Math.max(0, 100 - task.days_remaining * 10))}%;background:${task.days_remaining < 0 ? '#dc3545' : task.days_remaining <= 2 ? '#ffc107' : '#28a745'}"></div></div>
 </div>` : ''}
+                        ${task.progress_pct !== undefined && task.progress_pct !== null && task.progress_pct > 0 ? `<div class="mt-2 d-flex align-items-center gap-2">
+  <div class="progress flex-grow-1" style="height:5px;"><div class="progress-bar ${task.progress_pct >= 100 ? 'bg-success' : task.progress_pct >= 50 ? 'bg-primary' : 'bg-info'}" style="width:${task.progress_pct}%"></div></div>
+  <small class="text-muted fw-semibold" style="font-size:.75rem;">${task.progress_pct}%</small>
+</div>` : ''}
                     </div>
                     <!-- 快速状态切换 -->
                     <div class="quick-status-dropdown">
