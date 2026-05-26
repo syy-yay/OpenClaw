@@ -128,6 +128,7 @@ async function loadGantt() {
 
         calcDateRange();
         renderGantt();
+        setTimeout(drawDependencies, 150);
     } catch(e) {
         document.getElementById('gantt-loading').innerHTML = '<div class="alert alert-danger">加载失败</div>';
     }
@@ -263,6 +264,51 @@ function renderGantt() {
 
         row.appendChild(tlArea);
         container.appendChild(row);
+    });
+}
+
+function drawDependencies() {
+    const container = document.getElementById('gantt-body');
+    if (!container || !dependencies.length) return;
+    container.querySelectorAll('.gantt-dep-line').forEach(el => el.remove());
+    const taskMap = {}; tasks.forEach(t => { taskMap[t.id] = t; });
+    const barEls = container.querySelectorAll('.gantt-bar');
+    const barPositions = {};
+    tasks.forEach(t => {
+        const bar = container.querySelector('.gantt-row[data-task-id="' + t.id + '"] .gantt-bar');
+        if (bar) {
+            const rect = bar.getBoundingClientRect();
+            const cRect = container.getBoundingClientRect();
+            barPositions[t.id] = {
+                x: bar.offsetLeft + bar.offsetWidth,
+                y: bar.offsetTop + bar.offsetHeight / 2 + container.querySelector('.gantt-row').offsetTop || 0
+            };
+        }
+    });
+    dependencies.forEach(dep => {
+        if (!barPositions[dep.from_id] || !barPositions[dep.to_id]) return;
+        const from = barPositions[dep.from_id], to = barPositions[dep.to_id];
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'gantt-dep-line');
+        svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3;';
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const midX = (from.x + to.x) / 2;
+        path.setAttribute('d', 'M ' + from.x + ' ' + from.y + ' C ' + midX + ' ' + from.y + ', ' + midX + ' ' + to.y + ', ' + to.x + ' ' + to.y);
+        path.setAttribute('stroke', '#adb5bd'); path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none'); path.setAttribute('stroke-dasharray', '5,3');
+        path.setAttribute('marker-end', 'url(#gantt-arrow)');
+        svg.appendChild(path);
+        if (!document.getElementById('gantt-arrow-def')) {
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            defs.id = 'gantt-arrow-def';
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', 'gantt-arrow'); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '7');
+            marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3.5'); marker.setAttribute('orient', 'auto');
+            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            poly.setAttribute('points', '0 0, 10 3.5, 0 7'); poly.setAttribute('fill', '#adb5bd');
+            marker.appendChild(poly); defs.appendChild(marker); svg.appendChild(defs);
+        }
+        container.appendChild(svg);
     });
 }
 
