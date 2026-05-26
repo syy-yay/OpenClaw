@@ -31,6 +31,14 @@
         .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
         .empty-state { text-align: center; padding: 4rem 1rem; }
         .empty-state i { font-size: 3rem; color: #ccc; margin-bottom: 1rem; }
+        .auth-link { color: rgba(255,255,255,.85); text-decoration: none; padding: .35rem .85rem; border-radius: 20px; font-size: .9rem; transition: all .2s; }
+        .auth-link:hover { color: #fff; background: rgba(255,255,255,.15); }
+        .auth-link-primary { background: rgba(255,255,255,.2); }
+        .user-avatar-sm { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e9ecef; display: inline-flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 700; font-size: .9rem; }
+        .dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: .4rem; min-width: 140px; }
+        .dropdown-item { border-radius: 8px; padding: .45rem .85rem; font-size: .9rem; }
+        .dropdown-item:hover { background: #f0f4ff; }
+        .dropdown-item.text-danger:hover { background: #fff0f0; }
         @media (max-width: 768px) { .gantt-tasklist { width: 160px; } }
     </style>
 </head>
@@ -54,6 +62,7 @@
                     <span class="text-white-50 small" id="zoom-level">周</span>
                     <button class="btn btn-sm btn-outline-light" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
                 </div>
+                <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
             </div>
         </div>
     </div>
@@ -270,6 +279,42 @@ function zoomOut() {
 }
 
 document.addEventListener('DOMContentLoaded', loadGantt);
+</script>
+<script>
+/* Auth */
+let currentUser = null;
+function getToken() { return localStorage.getItem('jwt_token'); }
+function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
+function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function renderAuthControls() {
+    const container = document.getElementById('auth-controls');
+    if (!container) return;
+    const user = currentUser || getUser();
+    if (user) {
+        const initial = (user.username || 'U')[0].toUpperCase();
+        const avatar = user.avatar_url ? `<img src="${escHtml(user.avatar_url)}" class="user-avatar-sm">` : `<span class="user-avatar-sm">${escHtml(initial)}</span>`;
+        container.innerHTML = `<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;">${avatar}<span>${escHtml(user.username)}</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li></ul></div>`;
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
+    } else {
+        container.innerHTML = `<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>`;
+    }
+}
+async function checkAuth() {
+    const token = getToken();
+    if (!token) { currentUser = null; renderAuthControls(); return; }
+    try {
+        const r = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (r.ok) { const d = await r.json(); if (d.authenticated) { currentUser = d.user; } else { clearAuth(); } } else { clearAuth(); }
+    } catch(e) {}
+    renderAuthControls();
+}
+async function logout() {
+    const token = getToken();
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {} }); } catch(e) {}
+    clearAuth(); renderAuthControls(); window.location.href = '/';
+}
+checkAuth();
 </script>
 </body>
 </html>

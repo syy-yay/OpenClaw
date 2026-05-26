@@ -81,7 +81,8 @@
                     <h1 class="mb-1"><i class="fas fa-tasks me-2"></i>团队任务管理系统</h1>
                     <p class="lead mb-0">高效协作 · 清晰进度 · 精准管理</p>
                 </div>
-                <div id="auth-controls" class="d-flex align-items-center gap-2">
+                <a href="/gantt" class="btn btn-sm btn-outline-light rounded-pill" title="甘特图视图"><i class="fas fa-chart-bar me-1"></i>甘特图</a>
+                    <div id="auth-controls" class="d-flex align-items-center gap-2">
                     <!-- 动态渲染：登录状态或未登录 -->
                 </div>
             </div>
@@ -153,6 +154,18 @@
                         <div class="col-md-3">
                             <label for="task-due-date" class="form-label">截止日期</label>
                             <input type="date" class="form-control" id="task-due-date">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="task-start-date" class="form-label">开始日期</label>
+                            <input type="date" class="form-control" id="task-start-date">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="task-duration" class="form-label">工期(天)</label>
+                            <input type="number" class="form-control" id="task-duration" min="1" value="1" placeholder="天数">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="task-progress-pct" class="form-label">进度(%)</label>
+                            <input type="number" class="form-control" id="task-progress-pct" min="0" max="100" value="0">
                         </div>
                         <div class="col-12">
                             <label for="task-description" class="form-label">任务描述</label>
@@ -306,7 +319,10 @@
             const status = document.getElementById('task-status').value;
             const priority = document.getElementById('task-priority').value;
             const due_date = document.getElementById('task-due-date').value || null;
-            return { title, description, assignee, status, priority, due_date };
+            const start_date = document.getElementById('task-start-date').value || null;
+            const duration_days = parseInt(document.getElementById('task-duration').value) || 1;
+            const progress_pct = parseInt(document.getElementById('task-progress-pct').value) || 0;
+            return { title, description, assignee, status, priority, due_date, start_date, duration_days, progress_pct };
         }
 
         function resetEditMode() {
@@ -329,6 +345,9 @@
             document.getElementById('task-status').value = task.status;
             document.getElementById('task-priority').value = task.priority || 'medium';
             document.getElementById('task-due-date').value = task.due_date || '';
+            document.getElementById('task-start-date').value = task.start_date || '';
+            document.getElementById('task-duration').value = task.duration_days || 1;
+            document.getElementById('task-progress-pct').value = task.progress_pct || 0;
             document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-pen me-2"></i>更新任务';
             document.getElementById('cancel-edit-btn').classList.remove('d-none');
             createForm.style.display = 'block';
