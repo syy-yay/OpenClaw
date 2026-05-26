@@ -28,6 +28,8 @@
         .status-in-progress { background-color: #d1ecf1; color: #0c5460; }
         .status-completed { background-color: #d4edda; color: #155724; }
         .task-card { margin-bottom: 1.5rem; }
+        .recent-link { display: inline-block; padding: .3rem .7rem; margin: .2rem; background: #e9ecef; border-radius: 20px; font-size: .85rem; color: #495057; text-decoration: none; transition: all .15s; }
+        .recent-link:hover { background: var(--primary-color); color: #fff; }
         .progress-container { margin-top: 1rem; }
         .progress-bar { height: 8px; border-radius: 4px; }
         .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
@@ -434,6 +436,24 @@
         document.getElementById('cancel-edit-btn').addEventListener('click', resetEditMode);
         document.getElementById('sort-select')?.addEventListener('change', function() { sortBy = this.value; renderTasks(); });
 
+        function renderRecentTasks() {
+            try {
+                const recentIds = JSON.parse(localStorage.getItem('recent_tasks') || '[]');
+                const card = document.getElementById('recent-tasks-card');
+                const body = document.getElementById('recent-tasks-body');
+                if (!recentIds.length || !card || !body) { if (card) card.style.display = 'none'; return; }
+                // 只显示当前存在于 tasks 中的最近任务
+                const recent = recentIds.filter(id => tasks.some(t => t.id === id)).slice(0, 5);
+                if (!recent.length) { card.style.display = 'none'; return; }
+                card.style.display = 'block';
+                body.innerHTML = recent.map(id => {
+                    const t = tasks.find(t => t.id === id);
+                    if (!t) return '';
+                    return `<a href="/task_detail.html?id=${id}" class="recent-link" title="${escapeHtml(t.title)}">${escapeHtml(t.title.substring(0, 20))}${t.title.length > 20 ? '…' : ''}</a>`;
+                }).join('');
+            } catch(e) {}
+        }
+
         async function fetchTasks() {
             try {
                 const response = await fetch('/api/tasks');
@@ -576,6 +596,7 @@
             document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', function() { enterEditMode(parseInt(this.getAttribute('data-id'))); }));
             document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', function() { deleteTask(parseInt(this.getAttribute('data-id'))); }));
             updateStats();
+            renderRecentTasks();
             // 更新页面标题
             const total = tasks.length;
             document.title = total ? '(' + total + ') 团队任务管理系统' : '团队任务管理系统';

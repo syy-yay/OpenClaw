@@ -719,6 +719,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // 记录最近查看
+    try {
+        let recent = JSON.parse(localStorage.getItem('recent_tasks') || '[]');
+        recent = recent.filter(id => id !== taskId);
+        recent.unshift(taskId);
+        if (recent.length > 10) recent = recent.slice(0, 10);
+        localStorage.setItem('recent_tasks', JSON.stringify(recent));
+    } catch(e) {}
+
     loadTask(taskId);
     loadProgress(taskId);
     loadComments(taskId);
