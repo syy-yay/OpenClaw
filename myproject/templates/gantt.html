@@ -335,13 +335,17 @@ function scrollToToday() {
 function zoomIn() {
     dayWidth = Math.min(dayWidth + 8, 80);
     renderGantt();
-    document.getElementById('zoom-level').textContent = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+    setTimeout(drawDependencies, 100);
+    const lvl = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+    document.getElementById('zoom-level').textContent = lvl;
 }
 
 function zoomOut() {
     dayWidth = Math.max(dayWidth - 8, 12);
     renderGantt();
-    document.getElementById('zoom-level').textContent = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+    setTimeout(drawDependencies, 100);
+    const lvl = dayWidth >= 56 ? '日' : dayWidth >= 36 ? '3天' : '周';
+    document.getElementById('zoom-level').textContent = lvl;
 }
 
 document.addEventListener('DOMContentLoaded', loadGantt);
