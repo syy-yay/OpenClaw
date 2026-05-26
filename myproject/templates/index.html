@@ -545,6 +545,9 @@
             document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', function() { enterEditMode(parseInt(this.getAttribute('data-id'))); }));
             document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', function() { deleteTask(parseInt(this.getAttribute('data-id'))); }));
             updateStats();
+            // 更新页面标题
+            const total = tasks.length;
+            document.title = total ? '(' + total + ') 团队任务管理系统' : '团队任务管理系统';
         }
 
         function updateStats() {

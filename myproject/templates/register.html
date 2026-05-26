@@ -43,7 +43,10 @@
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold">密码 <span class="text-danger">*</span></label>
-            <input type="password" class="form-control" id="password" placeholder="至少 6 位" minlength="6" required>
+            <div class="input-group">
+                <input type="password" class="form-control" id="password" placeholder="至少 6 位" minlength="6" required>
+                <button class="btn btn-outline-secondary" type="button" id="toggle-pwd1" tabindex="-1" style="border-radius:0 8px 8px 0;"><i class="far fa-eye"></i></button>
+            </div>
             <div class="mt-2" style="height:4px;background:#eee;border-radius:2px;overflow:hidden;">
                 <div id="strength-bar" style="height:100%;width:0%;border-radius:2px;transition:width .3s,background-color .3s;"></div>
             </div>
@@ -51,7 +54,10 @@
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold">确认密码 <span class="text-danger">*</span></label>
-            <input type="password" class="form-control" id="confirm-password" placeholder="再次输入密码" required>
+            <div class="input-group">
+                <input type="password" class="form-control" id="confirm-password" placeholder="再次输入密码" required>
+                <button class="btn btn-outline-secondary" type="button" id="toggle-pwd2" tabindex="-1" style="border-radius:0 8px 8px 0;"><i class="far fa-eye"></i></button>
+            </div>
             <div class="form-text" id="confirm-hint"></div>
         </div>
         <button type="submit" class="btn btn-primary w-100 py-2" id="register-btn">
@@ -149,6 +155,15 @@ form.addEventListener('submit', async function(e) {
         registerBtn.disabled = false;
         registerBtn.innerHTML = '<i class="fas fa-user-plus me-2"></i>注册';
     }
+});
+['toggle-pwd1','toggle-pwd2'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', function() {
+        const targetId = id === 'toggle-pwd1' ? 'password' : 'confirm-password';
+        const inp = document.getElementById(targetId);
+        const isPwd = inp.type === 'password';
+        inp.type = isPwd ? 'text' : 'password';
+        this.innerHTML = isPwd ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
+    });
 });
 </script>
 </body>

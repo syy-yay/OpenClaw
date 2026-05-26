@@ -34,7 +34,10 @@
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold">密码</label>
-            <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+            <div class="input-group">
+                <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+                <button class="btn btn-outline-secondary" type="button" id="toggle-pwd" tabindex="-1" style="border-radius:0 8px 8px 0;"><i class="far fa-eye"></i></button>
+            </div>
         </div>
         <button type="submit" class="btn btn-primary w-100 py-2" id="login-btn">
             <i class="fas fa-sign-in-alt me-2"></i>登录系统
@@ -85,6 +88,12 @@ form.addEventListener('submit', async function(e) {
         loginBtn.disabled = false;
         loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>登录系统';
     }
+});
+document.getElementById('toggle-pwd')?.addEventListener('click', function() {
+    const inp = document.getElementById('password');
+    const isPwd = inp.type === 'password';
+    inp.type = isPwd ? 'text' : 'password';
+    this.innerHTML = isPwd ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
 });
 </script>
 </body>
