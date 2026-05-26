@@ -44,6 +44,10 @@
         <div class="mb-3">
             <label class="form-label fw-semibold">密码 <span class="text-danger">*</span></label>
             <input type="password" class="form-control" id="password" placeholder="至少 6 位" minlength="6" required>
+            <div class="mt-2" style="height:4px;background:#eee;border-radius:2px;overflow:hidden;">
+                <div id="strength-bar" style="height:100%;width:0%;border-radius:2px;transition:width .3s,background-color .3s;"></div>
+            </div>
+            <div class="form-text" id="strength-hint"></div>
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold">确认密码 <span class="text-danger">*</span></label>
@@ -90,6 +94,21 @@ confirmInput.addEventListener('input', function() {
 
 // 密码修改时同步确认检查
 passwordInput.addEventListener('input', function() {
+    const pw = this.value;
+    // 密码强度
+    const bar = document.getElementById('strength-bar');
+    const hint = document.getElementById('strength-hint');
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (!pw) { bar.style.width = '0%'; hint.textContent = ''; return; }
+    if (score <= 2) { bar.style.width = '33%'; bar.style.background = '#dc3545'; hint.innerHTML = '<span class="error">弱</span>'; }
+    else if (score <= 3) { bar.style.width = '66%'; bar.style.background = '#ffc107'; hint.innerHTML = '<span class="error">中</span>'; }
+    else { bar.style.width = '100%'; bar.style.background = '#28a745'; hint.innerHTML = '<span class="success">强 ✓</span>'; }
+    // 同步确认检查
     if (confirmInput.value.trim()) {
         confirmInput.dispatchEvent(new Event('input'));
     }
