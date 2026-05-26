@@ -30,6 +30,7 @@
         .task-card { margin-bottom: 1.5rem; }
         .recent-link { display: inline-block; padding: .3rem .7rem; margin: .2rem; background: #e9ecef; border-radius: 20px; font-size: .85rem; color: #495057; text-decoration: none; transition: all .15s; }
         .recent-link:hover { background: var(--primary-color); color: #fff; }
+        #my-tasks-btn { font-weight: 500; }
         .progress-container { margin-top: 1rem; }
         .progress-bar { height: 8px; border-radius: 4px; }
         .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
@@ -137,7 +138,8 @@
                         </div>
                         <div class="col-md-3">
                             <label for="task-assignee" class="form-label">负责人</label>
-                            <input type="text" class="form-control" id="task-assignee" placeholder="请输入负责人姓名">
+                            <input type="text" class="form-control" id="task-assignee" placeholder="请输入负责人姓名" list="assignee-list">
+                            <datalist id="assignee-list"></datalist>
                         </div>
                         <div class="col-md-3">
                             <label for="task-status" class="form-label">状态</label>
@@ -478,6 +480,8 @@
                 if (response.ok) {
                     tasks = await response.json();
                     renderTasks();
+                    // 更新负责人输入框自动补全
+                    document.getElementById('assignee-list').innerHTML = assignees.map(a => '<option value="' + escapeHtml(a) + '">').join('');
                     // 更新负责人过滤按钮
                     const assignees = [...new Set(tasks.filter(t => t.assignee).map(t => t.assignee))];
                     const assigneeBar = document.querySelector('[data-filter-assignee]')?.parentElement;
@@ -517,6 +521,10 @@
             if (assigneeFilter && assigneeFilter !== 'all') {
                 if (assigneeFilter === 'unassigned') {
                     filtered = filtered.filter(t => !t.assignee);
+                } else if (assigneeFilter === 'mine') {
+                    const myName = currentUser?.username || '';
+                    const myEmail = currentUser?.email || '';
+                    filtered = filtered.filter(t => t.assignee === myName || t.assignee === myEmail);
                 } else {
                     filtered = filtered.filter(t => t.assignee === assigneeFilter);
                 }
