@@ -58,9 +58,10 @@
                     <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>已完成</span>
                 </div>
                 <div class="zoom-controls">
-                    <button class="btn btn-sm btn-outline-light" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
+                    <button class="btn btn-sm btn-outline-light" title="缩小" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
                     <span class="text-white-50 small" id="zoom-level">周</span>
-                    <button class="btn btn-sm btn-outline-light" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                    <button class="btn btn-sm btn-outline-light" title="放大" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                    <button class="btn btn-sm btn-outline-light" title="刷新数据" onclick="refreshGantt()"><i class="fas fa-sync-alt"></i></button>
                 </div>
                 <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
             </div>
@@ -111,7 +112,7 @@ function parseISODate(s) {
 
 async function loadGantt() {
     try {
-        const r = await fetch('/api/gantt');
+        const r = await fetch('/api/gantt', { headers: getAuthHeader() });
         const data = await r.json();
         tasks = data.tasks;
         dependencies = data.dependencies || [];
@@ -330,6 +331,7 @@ document.addEventListener('DOMContentLoaded', loadGantt);
 /* Auth */
 let currentUser = null;
 function getToken() { return localStorage.getItem('jwt_token'); }
+function getAuthHeader() { const t = getToken(); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
 function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
 function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
 function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -361,6 +363,35 @@ async function logout() {
     clearAuth(); renderAuthControls(); window.location.href = '/';
 }
 checkAuth();
+// 自动刷新（每60秒）
+setInterval(function() {
+    const btn = document.querySelector('[onclick="refreshGantt()"]');
+    if (btn) btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+    fetch('/api/gantt', { headers: getAuthHeader() }).then(r => r.json()).then(data => {
+        tasks = data.tasks || [];
+        dependencies = data.dependencies || [];
+        calcDateRange();
+        renderGantt();
+        setTimeout(drawDependencies, 150);
+        document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
+        if (btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+    }).catch(() => { if (btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; });
+}, 60000);
+
+function refreshGantt() {
+    const btn = document.querySelector('[onclick="refreshGantt()"]');
+    if (btn) { btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>'; btn.disabled = true; }
+    fetch('/api/gantt', { headers: getAuthHeader() }).then(r => r.json()).then(data => {
+        tasks = data.tasks || [];
+        dependencies = data.dependencies || [];
+        document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
+        calcDateRange();
+        renderGantt();
+        setTimeout(drawDependencies, 150);
+    }).catch(e => { console.error(e); }).finally(() => {
+        if (btn) { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; btn.disabled = false; }
+    });
+}
 </script>
 </body>
 </html>
