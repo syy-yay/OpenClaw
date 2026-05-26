@@ -348,6 +348,20 @@ function getTaskId() {
     return parseInt(p.get('id')) || null;
 }
 
+// 未保存内容离开提醒
+let hasUnsaved = false;
+window.addEventListener('beforeunload', function(e) {
+    if (hasUnsaved) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// 输入框修改跟踪
+document.getElementById('comment-text')?.addEventListener('input', function() { hasUnsaved = true; });
+document.getElementById('note-text')?.addEventListener('input', function() { hasUnsaved = true; });
+
+// 提交后清除标记
+document.getElementById('comment-form')?.addEventListener('submit', function() { setTimeout(() => { hasUnsaved = false; }, 100); });
+document.getElementById('note-form')?.addEventListener('submit', function() { setTimeout(() => { hasUnsaved = false; }, 100); });
+
 /* ==================== 加载任务详情 ==================== */
 async function loadTask(taskId) {
     try {

@@ -378,10 +378,17 @@
             if (isHidden) document.getElementById('task-title').focus();
         });
 
-        resetFormBtn.addEventListener('click', function() { taskForm.reset(); document.getElementById('task-title').focus(); });
+        resetFormBtn.addEventListener('click', function() { taskForm.reset(); formDirty = false; document.getElementById('task-title').focus(); });
 
         // ==================== 表单提交（统一创建/编辑） ====================
         let editingTaskId = null;
+        let formDirty = false;
+
+        // 标记表单有修改
+        document.querySelectorAll('#task-form input, #task-form textarea, #task-form select').forEach(el => {
+            el.addEventListener('change', () => { formDirty = true; });
+            el.addEventListener('input', () => { formDirty = true; });
+        });
 
         function getFormData() {
             const title = document.getElementById('task-title').value.trim();
@@ -399,6 +406,7 @@
 
         function resetEditMode() {
             editingTaskId = null;
+            formDirty = false;
             taskForm.reset();
             document.getElementById('task-title').focus();
             document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-save me-2"></i>保存任务';
@@ -440,6 +448,7 @@
                 document.getElementById('task-title').classList.remove('is-invalid');
             }
 
+            formDirty = false;
             if (editingTaskId) {
                 // 编辑模式 → PUT
                 try {
