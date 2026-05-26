@@ -167,6 +167,12 @@
                             <label for="task-progress-pct" class="form-label">进度(%)</label>
                             <input type="number" class="form-control" id="task-progress-pct" min="0" max="100" value="0">
                         </div>
+                        <div class="col-md-3">
+                            <label for="task-depends-on" class="form-label">依赖任务</label>
+                            <select class="form-select" id="task-depends-on">
+                                <option value="">无</option>
+                            </select>
+                        </div>
                         <div class="col-12">
                             <label for="task-description" class="form-label">任务描述</label>
                             <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
@@ -322,7 +328,8 @@
             const start_date = document.getElementById('task-start-date').value || null;
             const duration_days = parseInt(document.getElementById('task-duration').value) || 1;
             const progress_pct = parseInt(document.getElementById('task-progress-pct').value) || 0;
-            return { title, description, assignee, status, priority, due_date, start_date, duration_days, progress_pct };
+            const depends_on_id = parseInt(document.getElementById('task-depends-on').value) || null;
+            return { title, description, assignee, status, priority, due_date, start_date, duration_days, progress_pct, depends_on_id };
         }
 
         function resetEditMode() {
@@ -348,6 +355,7 @@
             document.getElementById('task-start-date').value = task.start_date || '';
             document.getElementById('task-duration').value = task.duration_days || 1;
             document.getElementById('task-progress-pct').value = task.progress_pct || 0;
+            document.getElementById('task-depends-on').value = task.depends_on_id || '';
             document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-pen me-2"></i>更新任务';
             document.getElementById('cancel-edit-btn').classList.remove('d-none');
             createForm.style.display = 'block';
@@ -397,6 +405,13 @@
                 if (response.ok) {
                     tasks = await response.json();
                     renderTasks();
+                    // 更新依赖任务下拉框
+                    const $dep = document.getElementById('task-depends-on');
+                    if ($dep) {
+                        const currentVal = $dep.value;
+                        $dep.innerHTML = '<option value="">无</option>' + tasks.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
+                        $dep.value = currentVal;
+                    }
                 } else { throw new Error('获取任务列表失败'); }
             } catch (error) {
                 tasksContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>无法加载任务列表</div>';
@@ -440,6 +455,11 @@
 </span>` : ''}
                                     <span class="status-badge ${statusClass}"><i class="fas fa-${task.status === 'completed' ? 'check-circle' : task.status === 'in-progress' ? 'sync-alt' : 'clock'} me-1"></i>${task.status === 'completed' ? '已完成' : task.status === 'in-progress' ? '进行中' : '待处理'}</span>
                                     ${task.priority ? `<span class="badge bg-${task.priority === 'high' ? 'danger' : task.priority === 'medium' ? 'warning' : 'secondary'} ms-1">${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}</span>` : ''}
+                                    ${task.depends_on_id ? (() => {
+                                        const depTask = tasks.find(t => t.id === task.depends_on_id);
+                                        const depTitle = depTask ? depTask.title : '已删除';
+                                        return `<span class="badge bg-light text-muted border ms-1" title="依赖：${escapeHtml(depTitle)}"><i class="fas fa-link me-1"></i></span>`;
+                                    })() : ''}
                                 </div>
                             </div>
                             <div class="text-end">
