@@ -6,7 +6,7 @@ from functools import wraps
 
 import jwt
 from flask import Flask, request, jsonify, render_template
-from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment
+from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification
 
 
 def create_app():
@@ -277,6 +277,7 @@ def create_app():
             duration_days=data.get('duration_days', 1),
             progress_pct=data.get('progress_pct', 0),
             depends_on_id=data.get('depends_on_id'),
+            remind_before_minutes=data.get('remind_before_minutes'),
         )
         db.session.add(task)
         db.session.commit()
@@ -325,6 +326,8 @@ def create_app():
             task.progress_pct = data['progress_pct']
         if 'depends_on_id' in data:
             task.depends_on_id = data['depends_on_id']
+        if 'remind_before_minutes' in data:
+            task.remind_before_minutes = data['remind_before_minutes']
 
         db.session.commit()
         return jsonify(task.to_dict())
@@ -664,6 +667,77 @@ def create_app():
             'max_date': max(all_dates).isoformat() if all_dates else None,
             'total_tasks': len(tasks),
         })
+
+    # ==================== 提醒检查服务 ====================
+    def check_and_create_reminders():
+        """检查需要提醒的任务并生成通知（每次API请求时轻量执行）"""
+        now = datetime.utcnow()
+        today = now.date()
+        # 只查有 due_date、有 remind_before、未完成、且尚未生成提醒的任务
+        tasks_to_check = Task.query.filter(
+            Task.due_date.isnot(None),
+            Task.remind_before_minutes.isnot(None),
+            Task.status != 'completed',
+        ).all()
+
+        created = 0
+        for t in tasks_to_check:
+            # 计算提醒触发时间点
+            from datetime import timedelta as td
+            remind_time = t.due_date - td(minutes=t.remind_before_minutes)
+            # 如果提醒时间 <= 当前时间，且尚未生成提醒
+            if remind_time <= today:
+                # 检查是否已有该任务的提醒通知
+                existing = Notification.query.filter_by(
+                    task_id=t.id, ntype='reminder'
+                ).first()
+                if not existing:
+                    days = t.remind_before_minutes // 1440
+                    hours = t.remind_before_minutes // 60
+                    if days > 0:
+                        msg = f'任务 "{t.title}" 将在 {days} 天后到期'
+                    elif hours > 0:
+                        msg = f'任务 "{t.title}" 将在 {hours} 小时后到期'
+                    else:
+                        msg = f'任务 "{t.title}" 将在 {t.remind_before_minutes} 分钟后到期'
+                    notif = Notification(task_id=t.id, message=msg, ntype='reminder')
+                    db.session.add(notif)
+                    created += 1
+        if created:
+            db.session.commit()
+        return created
+
+    @app.route('/api/notifications', methods=['GET'])
+    def get_notifications():
+        check_and_create_reminders()
+        unread_first = Notification.query.order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
+        return jsonify([n.to_dict() for n in unread_first])
+
+    @app.route('/api/notifications/unread-count', methods=['GET'])
+    def get_unread_count():
+        check_and_create_reminders()
+        count = Notification.query.filter_by(is_read=False).count()
+        return jsonify({'count': count})
+
+    @app.route('/api/notifications/<int:nid>/read', methods=['POST'])
+    def mark_notification_read(nid):
+        notif = Notification.query.get_or_404(nid)
+        notif.is_read = True
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/notifications/read-all', methods=['POST'])
+    def mark_all_read():
+        Notification.query.filter_by(is_read=False).update({'is_read': True})
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/notifications/<int:nid>', methods=['DELETE'])
+    def delete_notification(nid):
+        notif = Notification.query.get_or_404(nid)
+        db.session.delete(notif)
+        db.session.commit()
+        return jsonify({'success': True})
     return app
 
 

@@ -31,6 +31,7 @@ class Task(db.Model):
 
     # 前置任务关系
     depends_on = db.relationship('Task', remote_side='Task.id', backref=db.backref('dependent_tasks', lazy='dynamic'))
+    remind_before_minutes = db.Column(db.Integer, nullable=True)  # 到期前N分钟提醒，null=不提醒
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -70,6 +71,7 @@ class Task(db.Model):
             'duration_days': self.duration_days,
             'progress_pct': self.progress_pct,
             'depends_on_id': self.depends_on_id,
+            'remind_before_minutes': self.remind_before_minutes,
             'due_date': self.due_date.isoformat() if self.due_date else None,
             'days_remaining': self.days_remaining,
             'tags': [{'id': t.id, 'name': t.name, 'color': t.color} for t in self.tags],
@@ -255,3 +257,31 @@ class Attachment(db.Model):
 
     def __repr__(self):
         return '<Attachment {}: {}>'.format(self.id, self.original_name)
+
+
+class Notification(db.Model):
+    # 通知消息
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True)
+    message = db.Column(db.String(500), nullable=False)
+    ntype = db.Column(db.String(20), default='reminder')  # reminder, system
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    task = db.relationship('Task', backref=db.backref('notifications', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'task_title': self.task.title if self.task else None,
+            'message': self.message,
+            'ntype': self.ntype,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def __repr__(self):
+        return '<Notification {}: {}>'.format(self.id, self.message[:30])
