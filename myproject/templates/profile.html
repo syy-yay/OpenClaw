@@ -224,7 +224,45 @@ $('logout-btn').addEventListener('click', async function() {
     setTimeout(() => { window.location.href = '/login'; }, 600);
 });
 
-document.addEventListener('DOMContentLoaded', loadProfile);
+
+function toggleNotifPanel() {
+    const p = document.getElementById('notif-panel'); const o = document.getElementById('notif-overlay');
+    if (!p) return;
+    if (p.style.transform === 'translateX(0px)') { p.style.transform = 'translateX(100%)'; o.style.display = 'none'; return; }
+    p.style.transform = 'translateX(0px)'; o.style.display = 'block'; loadNotifications();
+}
+function closeNotifPanel() {
+    const p = document.getElementById('notif-panel'); const o = document.getElementById('notif-overlay');
+    if (p) p.style.transform = 'translateX(100%)'; if (o) o.style.display = 'none';
+}
+async function loadNotifications() {
+    try {
+        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const notifs = await r.json(); const list = document.getElementById('notif-list');
+        if (!list) return;
+        if (!notifs.length) { list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>'; return; }
+        list.innerHTML = notifs.map(function(n) {
+            var cls = n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3';
+            var readBtn = n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>';
+            var time = new Date(n.created_at).toLocaleString('zh-CN');
+            return '<div class="card mb-2 border-0 ' + cls + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + time + '</small><div>' + readBtn + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><p class="mb-0 small">' + escHtml(n.message) + '</p></div></div>';
+        }).join('');
+    } catch(e) {}
+}
+async function loadUnreadCount() {
+    try {
+        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const data = await r.json(); const badge = document.getElementById('notif-badge');
+        if (!badge) return;
+        if (data.count > 0) { badge.style.display = 'inline'; badge.textContent = data.count > 99 ? '99+' : data.count; }
+        else { badge.style.display = 'none'; }
+    } catch(e) {}
+}
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+
+document.addEventListener('DOMContentLoaded', function() { setTimeout(loadUnreadCount, 500); setInterval(loadUnreadCount, 30000); loadProfile(); });
 </script>
 
     <footer style="background:#f0f2f5;padding:.8rem 0;margin-top:2rem;border-top:1px solid #e0e0e0;">

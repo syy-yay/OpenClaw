@@ -813,7 +813,14 @@
                     list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>';
                     return;
                 }
-                list.innerHTML = notifs.map(n => '<div class="card mb-2 border-0 ' + (n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3') + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + new Date(n.created_at).toLocaleString('zh-CN') + '</small><div>' + (n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>') + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><p class="mb-0 small">' + escapeHtml(n.message) + '</p></div></div>').join('');
+                list.innerHTML = notifs.map(function(n) {
+            var cls = n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3';
+            var readBtn = n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>';
+            var time = new Date(n.created_at).toLocaleString('zh-CN');
+            var msg = (typeof escHtml === 'function' ? escHtml(n.message) : n.message);
+            var link = '/task_detail.html?id=' + (n.task_id || '');
+            return '<div class="card mb-2 border-0 ' + cls + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + time + '</small><div>' + readBtn + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><a href="' + link + '" class="text-decoration-none text-dark"><p class="mb-0 small">' + msg + '</p></a></div></div>';
+        }).join('');
             } catch(e) {}
         }
         async function loadUnreadCount() {
