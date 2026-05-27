@@ -92,9 +92,15 @@
         <div class="card-body p-4">
             <div class="d-flex align-items-center gap-3 mb-3">
                 <i class="fas fa-chart-pie section-icon" style="color:#ffc107;"></i>
-                <h4 class="mb-0">任务统计</h4>
+                <h4 class="mb-0">任务统计 <small class="text-muted fw-normal" id="stat-completion-rate"></small></h4>
             </div>
             <div class="row g-3">
+                <div class="col-12">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height:12px;"><div class="progress-bar bg-success" id="stat-progress-bar" style="width:0%;border-radius:6px;"></div></div>
+                        <small class="text-muted fw-semibold" id="stat-progress-label">0%</small>
+                    </div>
+                </div>
                 <div class="col-sm-4">
                     <div class="stat-box"><div class="num text-warning" id="stat-pending">-</div><div class="lbl">待处理</div></div>
                 </div>
@@ -104,11 +110,29 @@
                 <div class="col-sm-4">
                     <div class="stat-box"><div class="num text-success" id="stat-completed">-</div><div class="lbl">已完成</div></div>
                 </div>
-                <div class="col-sm-6">
+                <div class="col-12"><hr class="my-1"></div>
+                <div class="col-sm-4">
                     <div class="stat-box"><div class="num text-danger" id="stat-overdue">-</div><div class="lbl">已超期</div></div>
                 </div>
-                <div class="col-sm-6">
-                    <div class="stat-box"><div class="num" id="stat-high-priority">-</div><div class="lbl">高优先级</div></div>
+                <div class="col-sm-4">
+                    <div class="stat-box"><div class="num text-warning" id="stat-due-today">-</div><div class="lbl">今日截止</div></div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="stat-box"><div class="num text-info" id="stat-due-soon">-</div><div class="lbl">2天内截止</div></div>
+                </div>
+                <div class="col-12"><hr class="my-1"></div>
+                <div class="col-sm-4">
+                    <div class="stat-box"><div class="num" id="stat-pri-high">-</div><div class="lbl">🔴 高优先级</div></div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="stat-box"><div class="num" id="stat-pri-medium">-</div><div class="lbl">🟡 中优先级</div></div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="stat-box"><div class="num" id="stat-pri-low">-</div><div class="lbl">🟢 低优先级</div></div>
+                </div>
+                <div class="col-12" id="stat-tags-section" style="display:none;">
+                    <hr class="my-1">
+                    <div class="d-flex flex-wrap gap-2" id="stat-tags"></div>
                 </div>
             </div>
         </div>
