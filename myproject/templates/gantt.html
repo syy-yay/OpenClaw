@@ -364,6 +364,45 @@ document.addEventListener('DOMContentLoaded', loadGantt);
 </script>
 <script>
 /* Auth */
+
+function toggleNotifPanel() {
+    const panel = document.getElementById('notif-panel');
+    const overlay = document.getElementById('notif-overlay');
+    if (!panel) return;
+    const isOpen = panel.style.transform === 'translateX(0px)';
+    if (isOpen) { closeNotifPanel(); return; }
+    panel.style.transform = 'translateX(0px)';
+    overlay.style.display = 'block';
+    loadNotifications();
+}
+function closeNotifPanel() {
+    const p = document.getElementById('notif-panel'); const o = document.getElementById('notif-overlay');
+    if (p) p.style.transform = 'translateX(100%)'; if (o) o.style.display = 'none';
+}
+async function loadNotifications() {
+    try {
+        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const notifs = await r.json();
+        const list = document.getElementById('notif-list');
+        if (!list) return;
+        if (!notifs.length) { list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>'; return; }
+        list.innerHTML = notifs.map(n => '<div class="card mb-2 border-0 ' + (n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3') + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + new Date(n.created_at).toLocaleString('zh-CN') + '</small><div>' + (n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>') + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><p class="mb-0 small">' + escHtml(n.message) + '</p></div></div>').join('');
+    } catch(e) {}
+}
+async function loadUnreadCount() {
+    try {
+        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const data = await r.json();
+        const badge = document.getElementById('notif-badge');
+        if (!badge) return;
+        if (data.count > 0) { badge.style.display = 'inline'; badge.textContent = data.count > 99 ? '99+' : data.count; }
+        else { badge.style.display = 'none'; }
+    } catch(e) {}
+}
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+
 let currentUser = null;
 function getToken() { return localStorage.getItem('jwt_token'); }
 function getAuthHeader() { const t = getToken(); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
@@ -468,5 +507,21 @@ function refreshGantt() {
             </div>
         </div>
     </footer>
+
+    <!-- 通知面板 -->
+    <div id="notif-panel" class="position-fixed top-0 end-0" style="z-index:1070;width:360px;max-width:90vw;height:100vh;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.1);transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column;">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+            <h6 class="mb-0"><i class="fas fa-bell me-2"></i>通知</h6>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary me-1" onclick="markAllRead()">全部已读</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="closeNotifPanel()">&times;</button>
+            </div>
+        </div>
+        <div id="notif-list" class="flex-grow-1 overflow-auto p-2">
+            <div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>
+        </div>
+    </div>
+    <div id="notif-overlay" class="position-fixed top-0 start-0" style="z-index:1069;width:100vw;height:100vh;background:rgba(0,0,0,.3);display:none;" onclick="closeNotifPanel()"></div>
+
 </body>
 </html>

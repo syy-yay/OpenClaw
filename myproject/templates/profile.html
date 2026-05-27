@@ -239,5 +239,21 @@ document.addEventListener('DOMContentLoaded', loadProfile);
             </div>
         </div>
     </footer>
+
+    <!-- 通知面板 -->
+    <div id="notif-panel" class="position-fixed top-0 end-0" style="z-index:1070;width:360px;max-width:90vw;height:100vh;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.1);transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column;">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+            <h6 class="mb-0"><i class="fas fa-bell me-2"></i>通知</h6>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary me-1" onclick="markAllRead()">全部已读</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="closeNotifPanel()">&times;</button>
+            </div>
+        </div>
+        <div id="notif-list" class="flex-grow-1 overflow-auto p-2">
+            <div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>
+        </div>
+    </div>
+    <div id="notif-overlay" class="position-fixed top-0 start-0" style="z-index:1069;width:100vw;height:100vh;background:rgba(0,0,0,.3);display:none;" onclick="closeNotifPanel()"></div>
+
 </body>
 </html>
