@@ -193,6 +193,18 @@
                                 <option value="">无</option>
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label for="task-remind" class="form-label">提前提醒</label>
+                            <select class="form-select" id="task-remind">
+                                <option value="">不提醒</option>
+                                <option value="30">30 分钟前</option>
+                                <option value="60">1 小时前</option>
+                                <option value="120">2 小时前</option>
+                                <option value="1440">1 天前</option>
+                                <option value="4320">3 天前</option>
+                                <option value="10080">7 天前</option>
+                            </select>
+                        </div>
                         <div class="col-12">
                             <label for="task-description" class="form-label">任务描述</label>
                             <textarea class="form-control" id="task-description" rows="2" placeholder="请输入任务详细描述"></textarea>
@@ -407,7 +419,8 @@
             const duration_days = parseInt(document.getElementById('task-duration').value) || 1;
             const progress_pct = parseInt(document.getElementById('task-progress-pct').value) || 0;
             const depends_on_id = parseInt(document.getElementById('task-depends-on').value) || null;
-            return { title, description, assignee, status, priority, due_date, start_date, duration_days, progress_pct, depends_on_id };
+            const remind_before_minutes = parseInt(document.getElementById('task-remind').value) || null;
+            return { title, description, assignee, status, priority, due_date, start_date, duration_days, progress_pct, depends_on_id, remind_before_minutes };
         }
 
         function resetEditMode() {
@@ -435,6 +448,7 @@
             document.getElementById('task-duration').value = task.duration_days || 1;
             document.getElementById('task-progress-pct').value = task.progress_pct || 0;
             document.getElementById('task-depends-on').value = task.depends_on_id || '';
+            document.getElementById('task-remind').value = task.remind_before_minutes || '';
             document.getElementById('form-submit-btn').innerHTML = '<i class="fas fa-pen me-2"></i>更新任务';
             document.getElementById('cancel-edit-btn').classList.remove('d-none');
             createForm.style.display = 'block';
@@ -792,7 +806,7 @@
         }
         async function loadNotifications() {
             try {
-                const r = await fetch('/api/notifications');
+                const r = await fetch('/api/notifications', { headers: getAuthHeader() });
                 const notifs = await r.json();
                 const list = document.getElementById('notif-list');
                 if (!notifs.length) {
@@ -804,7 +818,7 @@
         }
         async function loadUnreadCount() {
             try {
-                const r = await fetch('/api/notifications/unread-count');
+                const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
                 const data = await r.json();
                 const badge = document.getElementById('notif-badge');
                 if (data.count > 0) { badge.style.display = 'inline'; badge.textContent = data.count > 99 ? '99+' : data.count; }
@@ -836,6 +850,8 @@
             // 检查超期任务通知
             setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();
+            loadUnreadCount();
+            setInterval(loadUnreadCount, 30000);
             loadStats();
             fetchTasks();
             const ts = document.getElementById('last-refresh');
