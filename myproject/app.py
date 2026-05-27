@@ -154,6 +154,67 @@ def create_app():
         return jsonify({'authenticated': True, 'user': request.current_user.to_dict(full=True)})
 
     # ==================== 任务 API ====================
+    @app.route('/api/tasks/stats', methods=['GET'])
+    def get_task_stats():
+        total = Task.query.count()
+        pending = Task.query.filter_by(status='pending').count()
+        in_progress = Task.query.filter_by(status='in-progress').count()
+        completed = Task.query.filter_by(status='completed').count()
+
+        # 优先级分布
+        high = Task.query.filter_by(priority='high').count()
+        medium = Task.query.filter_by(priority='medium').count()
+        low = Task.query.filter_by(priority='low').count()
+
+        # 标签分布
+        tags = Tag.query.all()
+        tag_stats = [{'name': t.name, 'count': len(t.tasks), 'color': t.color} for t in tags]
+
+        # 超期统计
+        from datetime import datetime as dt
+        overdue = Task.query.filter(
+            Task.due_date.isnot(None),
+            Task.due_date < dt.utcnow().date(),
+            Task.status != 'completed'
+        ).count()
+        due_today = Task.query.filter(
+            Task.due_date == dt.utcnow().date(),
+            Task.status != 'completed'
+        ).count()
+        due_soon = Task.query.filter(
+            Task.due_date.isnot(None),
+            Task.due_date <= dt.utcnow().date() + timedelta(days=2),
+            Task.due_date > dt.utcnow().date(),
+            Task.status != 'completed'
+        ).count()
+
+        # 有/无截止日期的任务
+        with_due = Task.query.filter(Task.due_date.isnot(None)).count()
+        without_due = Task.query.filter(Task.due_date.is_(None)).count()
+
+        return jsonify({
+            'total': total,
+            'by_status': {
+                'pending': pending,
+                'in-progress': in_progress,
+                'completed': completed,
+            },
+            'by_priority': {
+                'high': high,
+                'medium': medium,
+                'low': low,
+            },
+            'by_tag': tag_stats,
+            'due_date': {
+                'overdue': overdue,
+                'today': due_today,
+                'soon': due_soon,
+                'with_due_date': with_due,
+                'without_due_date': without_due,
+            },
+            'completion_rate': round(completed / total * 100, 1) if total > 0 else 0,
+        })
+
     @app.route('/api/tasks', methods=['GET'])
     def get_tasks():
         sort_by = request.args.get('sort', 'priority')
