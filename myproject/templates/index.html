@@ -499,6 +499,21 @@
             } catch(e) {}
         }
 
+        async function loadStats() {
+            try {
+                const r = await fetch('/api/tasks/stats');
+                if (r.ok) {
+                    const s = await r.json();
+                    document.getElementById('total-tasks').textContent = s.total;
+                    document.getElementById('completed-tasks').textContent = s.by_status.completed;
+                    document.getElementById('in-progress-tasks').textContent = s.by_status['in-progress'];
+                    document.getElementById('pending-tasks').textContent = s.by_status.pending;
+                    document.getElementById('rate-bar').style.width = s.completion_rate + '%';
+                    document.getElementById('rate-label').textContent = s.completion_rate + '%';
+                }
+            } catch(e) { /* fallback to computed stats */ }
+        }
+
         async function fetchTasks() {
             try {
                 const response = await fetch('/api/tasks');
@@ -758,6 +773,7 @@
             // 检查超期任务通知
             setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();
+            loadStats();
             fetchTasks();
             const ts = document.getElementById('last-refresh');
             if (ts) ts.innerHTML = '<i class="far fa-clock me-1"></i>加载中...';
