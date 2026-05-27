@@ -6,7 +6,7 @@ from functools import wraps
 
 import jwt
 from flask import Flask, request, jsonify, render_template
-from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification
+from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification, SearchHistory
 
 
 def create_app():
@@ -738,6 +738,56 @@ def create_app():
         db.session.delete(notif)
         db.session.commit()
         return jsonify({'success': True})
+
+    # ==================== 搜索历史 ====================
+    MAX_SEARCH_HISTORY = 20
+
+    @app.route('/api/search-history', methods=['GET'])
+    def get_search_history():
+        """获取最近搜索历史（去重，保留最近20条）"""
+        records = SearchHistory.query.order_by(SearchHistory.created_at.desc()).all()
+        seen = set()
+        result = []
+        for r in records:
+            if r.keyword not in seen:
+                seen.add(r.keyword)
+                result.append(r.to_dict())
+                if len(result) >= 10:
+                    break
+        return jsonify(result)
+
+    @app.route('/api/search-history', methods=['POST'])
+    def record_search():
+        """记录搜索关键词"""
+        data = request.get_json() or {}
+        keyword = (data.get('keyword') or '').strip()
+        if not keyword or len(keyword) > 200:
+            return jsonify({'error': '关键词无效'}), 400
+
+        # 去重：如果已存在相同关键词，先删除旧的
+        existing = SearchHistory.query.filter_by(keyword=keyword).first()
+        if existing:
+            db.session.delete(existing)
+
+        record = SearchHistory(keyword=keyword)
+        db.session.add(record)
+
+        # 限制总数
+        total = SearchHistory.query.count()
+        if total > MAX_SEARCH_HISTORY:
+            oldest = SearchHistory.query.order_by(SearchHistory.created_at.asc()).first()
+            if oldest:
+                db.session.delete(oldest)
+
+        db.session.commit()
+        return jsonify({'success': True, 'search_history': record.to_dict()}), 201
+
+    @app.route('/api/search-history', methods=['DELETE'])
+    def clear_search_history():
+        """清空搜索历史"""
+        SearchHistory.query.delete()
+        db.session.commit()
+        return jsonify({'success': True, 'message': '搜索历史已清空'})
     return app
 
 

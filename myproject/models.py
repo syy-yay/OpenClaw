@@ -285,3 +285,19 @@ class Notification(db.Model):
 
     def __repr__(self):
         return '<Notification {}: {}>'.format(self.id, self.message[:30])
+
+
+class SearchHistory(db.Model):
+    # 搜索历史
+    __tablename__ = 'search_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    keyword = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'keyword': self.keyword,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
