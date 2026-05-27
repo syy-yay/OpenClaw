@@ -510,7 +510,17 @@
                     document.getElementById('pending-tasks').textContent = s.by_status.pending;
                     document.getElementById('rate-bar').style.width = s.completion_rate + '%';
                     document.getElementById('rate-label').textContent = s.completion_rate + '%';
-                }
+                    // 标签云
+                    const tagCloud = document.getElementById('tag-cloud');
+                    if (tagCloud) {
+                        if (s.by_tag && s.by_tag.length) {
+                            tagCloud.innerHTML = s.by_tag.map(t => 
+                                '<span class="badge border px-2 py-1" style="font-size:.78rem;background:' + (t.color || '#e9ecef') + ';color:' + (t.color && parseInt(t.color.slice(1),16) > 0x666666 ? '#fff' : '#333') + ';">' + t.name + ' <span class="ms-1 fw-bold">' + t.count + '</span></span>'
+                            ).join('');
+                        } else {
+                            tagCloud.innerHTML = '';
+                        }
+                    }
             } catch(e) { /* fallback to computed stats */ }
         }
 
