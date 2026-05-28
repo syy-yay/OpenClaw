@@ -857,12 +857,13 @@
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // 路由守卫：检查登录态
+            // 检查登录态（任务 API 无需认证，仅用于 UI 显示）
             await checkAuth();
-            if (!currentUser && !getUser()) {
-                window.location.href = '/login';
-                return;
+            // 有缓存用户信息也恢复显示
+            if (!currentUser && getUser()) {
+                currentUser = getUser();
             }
+            renderAuthControls();
             // 检查超期任务通知
             setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();

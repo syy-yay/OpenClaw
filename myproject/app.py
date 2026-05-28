@@ -8,10 +8,11 @@ import jwt
 from flask import Flask, request, jsonify, render_template
 from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification, SearchHistory
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 def create_app():
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'tasks.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
