@@ -582,9 +582,9 @@
                     const ts = document.getElementById('last-refresh');
                     if (ts) ts.innerHTML = '<i class="far fa-clock me-1"></i>' + new Date().toLocaleTimeString('zh-CN');
                     // 更新负责人输入框自动补全
+                    const assignees = [...new Set(tasks.filter(t => t.assignee).map(t => t.assignee))];
                     document.getElementById('assignee-list').innerHTML = assignees.map(a => '<option value="' + escapeHtml(a) + '">').join('');
                     // 更新负责人过滤按钮
-                    const assignees = [...new Set(tasks.filter(t => t.assignee).map(t => t.assignee))];
                     const assigneeBar = document.querySelector('[data-filter-assignee]')?.parentElement;
                     if (assigneeBar) {
                         const currentVal = document.querySelector('[data-filter-assignee].active')?.getAttribute('data-filter-assignee') || 'all';
