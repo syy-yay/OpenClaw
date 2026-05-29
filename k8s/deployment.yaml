@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: openclaw-app
-        image: 192.168.1.200:5000/openclaw/myapp:3a58c5e
+        image: 192.168.1.200:5000/openclaw/myapp:e06c97c
         ports:
         - containerPort: 5000
 ---
