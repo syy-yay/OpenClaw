@@ -903,8 +903,8 @@
             document.getElementById('submit-ann-btn').addEventListener('click', async function() {
                 const title = document.getElementById('ann-title').value.trim();
                 const content = document.getElementById('ann-content').value.trim();
-                if (!title) { alert('请输入标题'); return; }
-                if (!content) { alert('请输入内容'); return; }
+                if (!title) { showToast('请输入标题', 'error'); document.getElementById('ann-title').focus(); return; }
+                if (!content) { showToast('请输入内容', 'error'); document.getElementById('ann-content').focus(); return; }
                 this.disabled = true; this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>发布中...';
                 try {
                     const r = await fetch('/api/announcements', {
@@ -917,9 +917,9 @@
                         showToast('公告已发布', 'success');
                     } else {
                         const err = await r.json().catch(()=>({}));
-                        alert(err.error || '发布失败');
+                        showToast(err.error || '发布失败', 'error');
                     }
-                } catch(e) { alert('网络错误'); }
+                } catch(e) { showToast('网络错误', 'error'); }
                 finally { this.disabled = false; this.innerHTML = '<i class="fas fa-paper-plane me-1"></i>发布'; }
             });
         }
