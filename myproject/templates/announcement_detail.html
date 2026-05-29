@@ -6,17 +6,37 @@
     <title>{{ announcement.title }} - 团队任务管理系统</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
     <style>
         body { background: #f5f7fa; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
         .page-header { background: linear-gradient(135deg, #4a6fa5, #2c3e50); color: #fff; padding: 1.5rem 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .auth-link { color: rgba(255,255,255,.85); text-decoration: none; padding: .35rem .85rem; border-radius: 20px; font-size: .9rem; transition: all .2s; }
+        .auth-link:hover { color: #fff; background: rgba(255,255,255,.15); }
+        .auth-link-primary { background: rgba(255,255,255,.2); }
+        .user-avatar-sm { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e9ecef; display: inline-flex; align-items: center; justify-content: center; color: #4a6fa5; font-weight: 700; font-size: .9rem; }
+        .dropdown-menu { border-radius: 10px; border: none; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: .4rem; min-width: 140px; }
+        .dropdown-item { border-radius: 8px; padding: .45rem .85rem; font-size: .9rem; }
+        .dropdown-item:hover { background: #f0f4ff; }
+        .dropdown-item.text-danger:hover { background: #fff0f0; }
     </style>
 </head>
 <body>
 <header class="page-header">
     <div class="container">
-        <a href="/" class="text-white-50 me-3 text-decoration-none"><i class="fas fa-arrow-left"></i> 返回</a>
-        <span class="fs-4 fw-semibold"><i class="fas fa-bullhorn me-2"></i>公告详情</span>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="/" class="text-white-50 me-3 text-decoration-none"><i class="fas fa-arrow-left"></i> 返回</a>
+                <span class="fs-4 fw-semibold"><i class="fas fa-bullhorn me-2"></i>公告详情</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm position-relative text-white-50 border-0 p-1" onclick="toggleNotifPanel()" style="background:transparent;" title="通知">
+                    <i class="fas fa-bell"></i>
+                    <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.55rem;display:none;">0</span>
+                </button>
+                <div id="auth-controls" class="d-flex align-items-center gap-2"></div>
+            </div>
+        </div>
     </div>
 </header>
 <div class="container mt-4 mb-5">
@@ -33,6 +53,93 @@
         <div class="text-muted small">发布人：{{ announcement.author }}</div>
     </div>
 </div>
+<!-- 通知面板 -->
+<div id="notif-panel" class="position-fixed top-0 end-0" style="z-index:1070;width:360px;max-width:90vw;height:100vh;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,.1);transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column;">
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+        <h6 class="mb-0"><i class="fas fa-bell me-2"></i>通知</h6>
+        <div><button class="btn btn-sm btn-outline-secondary me-1" onclick="markAllRead()">全部已读</button><button class="btn btn-sm btn-outline-danger" onclick="closeNotifPanel()">&times;</button></div>
+    </div>
+    <div id="notif-list" class="flex-grow-1 overflow-auto p-2"><div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div></div>
+</div>
+<div id="notif-overlay" class="position-fixed top-0 start-0" style="z-index:1069;width:100vw;height:100vh;background:rgba(0,0,0,.3);display:none;" onclick="closeNotifPanel()"></div>
+<footer style="background:#f0f2f5;padding:.8rem 0;margin-top:2rem;border-top:1px solid #e0e0e0;">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <small class="text-muted">&copy; 2026 团队任务管理系统</small>
+            <div class="d-flex gap-3">
+                <a href="/" class="text-muted text-decoration-none small"><i class="fas fa-home me-1"></i>首页</a>
+                <a href="/about" class="text-muted text-decoration-none small"><i class="fas fa-info-circle me-1"></i>关于</a>
+                <a href="/gantt" class="text-muted text-decoration-none small"><i class="fas fa-chart-bar me-1"></i>甘特图</a>
+            </div>
+        </div>
+    </div>
+</footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* Auth + Notifications */
+let currentUser = null;
+function getToken() { return localStorage.getItem('jwt_token'); }
+function getAuthHeader() { const t = getToken(); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
+function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
+function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function renderAuthControls() {
+    const c = document.getElementById('auth-controls'); if (!c) return;
+    const u = currentUser || getUser();
+    if (u) {
+        const init = (u.username || 'U')[0].toUpperCase();
+        c.innerHTML = '<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;"><span class="user-avatar-sm">' + init + '</span><span>' + escHtml(u.username) + '</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li></ul></div>';
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
+    } else {
+        c.innerHTML = '<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>';
+    }
+}
+async function checkAuth() {
+    const t = getToken(); if (!t) { currentUser = null; renderAuthControls(); return; }
+    try { const r = await fetch('/api/auth/me', { headers: getAuthHeader() }); if (r.ok) { const d = await r.json(); if (d.authenticated) currentUser = d.user; else clearAuth(); } else clearAuth(); } catch(e) {}
+    renderAuthControls();
+}
+async function logout() {
+    const t = getToken();
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: t ? getAuthHeader() : {} }); } catch(e) {}
+    clearAuth(); renderAuthControls(); window.location.href = '/';
+}
+function toggleNotifPanel() {
+    const p = document.getElementById('notif-panel'), o = document.getElementById('notif-overlay');
+    if (!p) return;
+    if (p.style.transform === 'translateX(0px)') { p.style.transform = 'translateX(100%)'; o.style.display = 'none'; return; }
+    p.style.transform = 'translateX(0px)'; o.style.display = 'block'; loadNotifications();
+}
+function closeNotifPanel() {
+    const p = document.getElementById('notif-panel'), o = document.getElementById('notif-overlay');
+    if (p) p.style.transform = 'translateX(100%)'; if (o) o.style.display = 'none';
+}
+async function loadNotifications() {
+    try {
+        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const notifs = await r.json(); const list = document.getElementById('notif-list');
+        if (!list) return;
+        if (!notifs.length) { list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>'; return; }
+        list.innerHTML = notifs.map(function(n) {
+            var cls = n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3';
+            var readBtn = n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>';
+            return '<div class="card mb-2 border-0 ' + cls + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + new Date(n.created_at).toLocaleString('zh-CN') + '</small><div>' + readBtn + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><a href="/task_detail.html?id=' + (n.task_id || '') + '" class="text-decoration-none text-dark"><p class="mb-0 small">' + escHtml(n.message) + '</p></a></div></div>';
+        }).join('');
+    } catch(e) {}
+}
+async function loadUnreadCount() {
+    try {
+        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const d = await r.json(); const b = document.getElementById('notif-badge');
+        if (!b) return;
+        if (d.count > 0) { b.style.display = 'inline'; b.textContent = d.count > 99 ? '99+' : d.count; }
+        else b.style.display = 'none';
+    } catch(e) {}
+}
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+document.addEventListener('DOMContentLoaded', function() { checkAuth(); setTimeout(loadUnreadCount, 500); setInterval(loadUnreadCount, 30000); });
+</script>
 </body>
 </html>

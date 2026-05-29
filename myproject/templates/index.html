@@ -337,6 +337,7 @@
             const container = document.getElementById('auth-controls');
             const user = currentUser || getUser();
             if (user) {
+                checkAdminPermission();
                 const initial = (user.username || 'U')[0].toUpperCase();
                 const avatar = user.avatar_url
                     ? `<img src="${escapeHtml(user.avatar_url)}" class="user-avatar-sm">`
@@ -350,6 +351,7 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#" onclick="event.preventDefault();document.querySelector('[data-filter-assignee=mine]')?.click();return false;"><i class="fas fa-tasks me-2"></i>我的任务</a></li>
                     <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
+                    <li><button class="dropdown-item" id="create-announcement-btn" onclick="showCreateAnnouncement()" style="display:none;"><i class="fas fa-bullhorn me-2"></i>发布公告</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
                         </ul>
@@ -888,6 +890,46 @@
                 // 存全局
                 window.allAnnouncements = anns;
             } catch(e) {}
+        }
+
+        // 创建公告（管理员）
+        function showCreateAnnouncement() {
+            const modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = 'createAnnModal';
+            modal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"><i class="fas fa-bullhorn me-2"></i>发布公告</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="form-label">标题</label><input type="text" class="form-control" id="ann-title" placeholder="公告标题" maxlength="200"></div><div class="mb-3"><label class="form-label">内容</label><textarea class="form-control" id="ann-content" rows="4" placeholder="公告内容"></textarea></div></div><div class="modal-footer border-0 pt-0"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" id="submit-ann-btn"><i class="fas fa-paper-plane me-1"></i>发布</button></div></div></div>';
+            document.body.appendChild(modal);
+            new bootstrap.Modal(modal).show();
+            modal.addEventListener('hidden.bs.modal', () => modal.remove());
+            document.getElementById('submit-ann-btn').addEventListener('click', async function() {
+                const title = document.getElementById('ann-title').value.trim();
+                const content = document.getElementById('ann-content').value.trim();
+                if (!title) { alert('请输入标题'); return; }
+                if (!content) { alert('请输入内容'); return; }
+                this.disabled = true; this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>发布中...';
+                try {
+                    const r = await fetch('/api/announcements', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                        body: JSON.stringify({ title, content })
+                    });
+                    if (r.ok) { 
+                        bootstrap.Modal.getInstance(modal).hide();
+                        loadAnnouncements();
+                        showToast('公告已发布', 'success');
+                    } else {
+                        const err = await r.json().catch(()=>({}));
+                        alert(err.error || '发布失败');
+                    }
+                } catch(e) { alert('网络错误'); }
+                finally { this.disabled = false; this.innerHTML = '<i class="fas fa-paper-plane me-1"></i>发布'; }
+            });
+        }
+
+        // 检查管理员权限，显示发布公告按钮
+        function checkAdminPermission() {
+            const btn = document.getElementById('create-announcement-btn');
+            if (!btn) return;
+            const user = currentUser || getUser();
+            if (user && user.role === 'admin') btn.style.display = 'block';
         }
 
         function showAllAnnouncements() {
