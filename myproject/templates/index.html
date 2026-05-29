@@ -607,7 +607,7 @@
                     const $dep = document.getElementById('task-depends-on');
                     if ($dep) {
                         const currentVal = $dep.value;
-                        $dep.innerHTML = '<option value="">无</option>' + tasks.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
+                        $dep.innerHTML = '<option value="">无</option>' + tasks.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
                         $dep.value = currentVal;
                     }
                 } else { throw new Error('获取任务列表失败'); }
@@ -848,7 +848,7 @@
             var cls = n.is_read ? 'bg-light' : 'bg-white border-start border-primary border-3';
             var readBtn = n.is_read ? '' : '<button class="btn btn-sm btn-link py-0 text-decoration-none" onclick="markRead(' + n.id + ')">标为已读</button>';
             var time = new Date(n.created_at).toLocaleString('zh-CN');
-            var msg = (typeof escHtml === 'function' ? escHtml(n.message) : n.message);
+            var msg = (typeof escHtml === 'function' ? escapeHtml(n.message) : n.message);
             var link = '/task_detail.html?id=' + (n.task_id || '');
             return '<div class="card mb-2 border-0 ' + cls + '" style="border-radius:8px;"><div class="card-body py-2 px-3"><div class="d-flex justify-content-between"><small class="text-muted">' + time + '</small><div>' + readBtn + '<button class="btn btn-sm btn-link py-0 text-danger text-decoration-none" onclick="deleteNotif(' + n.id + ')">&times;</button></div></div><a href="' + link + '" class="text-decoration-none text-dark"><p class="mb-0 small">' + msg + '</p></a></div></div>';
         }).join('');
