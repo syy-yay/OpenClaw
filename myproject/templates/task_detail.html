@@ -250,17 +250,17 @@
 /* ==================== JWT Auth ==================== */
 let currentUser = null;
 
-function getToken() { return localStorage.getItem('jwt_token'); }
-function getUser() {
-    try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; }
+() { return false; }
+() {
+    try { return JSON.parse(null); } catch(e) { return null; }
 }
-function saveAuth(token, user) {
-    localStorage.setItem('jwt_token', token);
-    localStorage.setItem('jwt_user', JSON.stringify(user));
+(token, user) {
+     token);
+     JSON.stringify(user));
 }
-function clearAuth() {
-    localStorage.removeItem('jwt_token');
-    localStorage.removeItem('jwt_user');
+() {
+    ;
+    ;
     currentUser = null;
 }
 
@@ -282,10 +282,10 @@ function renderAuthControls() {
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
+                    <li><a class="dropdown-item text-danger" href="/api/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
                 </ul>
             </div>`;
-        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        
     } else {
         container.innerHTML = `
             <a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a>
@@ -301,30 +301,23 @@ window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 
 async function checkAuth() {
-    const token = getToken();
+    
     if (!token) { currentUser = null; renderAuthControls(); return; }
     try {
-        const r = await fetch('/api/auth/me', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const r = await fetch('/api/auth/me');
         if (r.ok) {
             const data = await r.json();
-            if (data.authenticated) { currentUser = data.user; saveAuth(token, data.user); }
-            else { clearAuth(); }
-        } else { clearAuth(); }
+            if (data.authenticated) { currentUser = data.user; token, data.user); }
+            else { ; }
+        } else { ; }
     } catch(e) { /* offline */ }
     renderAuthControls();
 }
 
-async function logout() {
-    const token = getToken();
-    try {
-        await fetch('/api/auth/logout', {
-            method: 'POST',
-            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+async function logout() { window.location.href = '/api/auth/logout'; } : {}
         });
     } catch(e) { /* ignore */ }
-    clearAuth();
+    ;
     renderAuthControls();
     window.location.href = '/';
 }
@@ -762,7 +755,7 @@ function closeNotifPanel() {
 }
 async function loadNotifications() {
     try {
-        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications', { headers: () => ({}) });
         const notifs = await r.json();
         const list = document.getElementById('notif-list');
         if (!list) return;
@@ -772,7 +765,7 @@ async function loadNotifications() {
 }
 async function loadUnreadCount() {
     try {
-        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications/unread-count', { headers: () => ({}) });
         const data = await r.json();
         const badge = document.getElementById('notif-badge');
         if (!badge) return;
@@ -780,9 +773,9 @@ async function loadUnreadCount() {
         else { badge.style.display = 'none'; }
     } catch(e) {}
 }
-async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
 
 document.addEventListener('DOMContentLoaded', function() {
     checkAuth();

@@ -117,7 +117,7 @@ function parseISODate(s) {
 
 async function loadGantt() {
     try {
-        const r = await fetch('/api/gantt', { headers: getAuthHeader() });
+        const r = await fetch('/api/gantt', { headers: () => ({}) });
         const data = await r.json();
         tasks = data.tasks;
         dependencies = data.dependencies || [];
@@ -132,7 +132,7 @@ async function loadGantt() {
         document.getElementById('gantt-chart').style.display = 'block';
         document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
         // 加载统计信息
-        fetch('/api/tasks/stats', { headers: getAuthHeader() }).then(r => r.json()).then(s => {
+        fetch('/api/tasks/stats', { headers: () => ({}) }).then(r => r.json()).then(s => {
             if (s.due_date && s.due_date.overdue > 0) {
                 const b = document.getElementById('gantt-overdue-badge');
                 b.textContent = '🔴 超期 ' + s.due_date.overdue;
@@ -381,7 +381,7 @@ function closeNotifPanel() {
 }
 async function loadNotifications() {
     try {
-        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications', { headers: () => ({}) });
         const notifs = await r.json();
         const list = document.getElementById('notif-list');
         if (!list) return;
@@ -391,7 +391,7 @@ async function loadNotifications() {
 }
 async function loadUnreadCount() {
     try {
-        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications/unread-count', { headers: () => ({}) });
         const data = await r.json();
         const badge = document.getElementById('notif-badge');
         if (!badge) return;
@@ -399,15 +399,15 @@ async function loadUnreadCount() {
         else { badge.style.display = 'none'; }
     } catch(e) {}
 }
-async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
 
 let currentUser = null;
-function getToken() { return localStorage.getItem('jwt_token'); }
-function getAuthHeader() { const t = getToken(); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
-function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
-function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+() { return false; }
+() { return {}; }
+() { try { return JSON.parse(null); } catch(e) { return null; } }
+() { ; ; currentUser = null; }
 function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function renderAuthControls() {
     const container = document.getElementById('auth-controls');
@@ -416,8 +416,8 @@ function renderAuthControls() {
     if (user) {
         const initial = (user.username || 'U')[0].toUpperCase();
         const avatar = user.avatar_url ? `<img src="${escHtml(user.avatar_url)}" class="user-avatar-sm">` : `<span class="user-avatar-sm">${escHtml(initial)}</span>`;
-        container.innerHTML = `<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;">${avatar}<span>${escHtml(user.username)}</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li></ul></div>`;
-        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        container.innerHTML = `<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;">${avatar}<span>${escHtml(user.username)}</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="/api/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li></ul></div>`;
+        
     } else {
         container.innerHTML = `<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>`;
     }
@@ -430,25 +430,25 @@ window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 
 async function checkAuth() {
-    const token = getToken();
-    if (!token) { currentUser = null; renderAuthControls(); return; }
+    
+    currentUser = null;
     try {
-        const r = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (r.ok) { const d = await r.json(); if (d.authenticated) { currentUser = d.user; } else { clearAuth(); } } else { clearAuth(); }
+        const r = await fetch('/api/auth/me');
+        if (r.ok) { const d = await r.json(); if (d.authenticated) { currentUser = d.user; } else { ; } } else { ; }
     } catch(e) {}
     renderAuthControls();
 }
 async function logout() {
-    const token = getToken();
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {} }); } catch(e) {}
-    clearAuth(); renderAuthControls(); window.location.href = '/';
+    
+    try { await  } catch(e) {}
+    ; renderAuthControls(); window.location.href = '/';
 }
 checkAuth();
 // 自动刷新（每60秒）
 setInterval(function() {
     const btn = document.querySelector('[onclick="refreshGantt()"]');
     if (btn) btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
-    fetch('/api/gantt', { headers: getAuthHeader() }).then(r => r.json()).then(data => {
+    fetch('/api/gantt', { headers: () => ({}) }).then(r => r.json()).then(data => {
         tasks = data.tasks || [];
         dependencies = data.dependencies || [];
         calcDateRange();
@@ -456,7 +456,7 @@ setInterval(function() {
         setTimeout(drawDependencies, 150);
         document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
         // 加载统计信息
-        fetch('/api/tasks/stats', { headers: getAuthHeader() }).then(r => r.json()).then(s => {
+        fetch('/api/tasks/stats', { headers: () => ({}) }).then(r => r.json()).then(s => {
             if (s.due_date && s.due_date.overdue > 0) {
                 const b = document.getElementById('gantt-overdue-badge');
                 b.textContent = '🔴 超期 ' + s.due_date.overdue;
@@ -472,12 +472,12 @@ setInterval(function() {
 function refreshGantt() {
     const btn = document.querySelector('[onclick="refreshGantt()"]');
     if (btn) { btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>'; btn.disabled = true; }
-    fetch('/api/gantt', { headers: getAuthHeader() }).then(r => r.json()).then(data => {
+    fetch('/api/gantt', { headers: () => ({}) }).then(r => r.json()).then(data => {
         tasks = data.tasks || [];
         dependencies = data.dependencies || [];
         document.getElementById('task-count-badge').textContent = tasks.length + ' 个任务';
         // 加载统计信息
-        fetch('/api/tasks/stats', { headers: getAuthHeader() }).then(r => r.json()).then(s => {
+        fetch('/api/tasks/stats', { headers: () => ({}) }).then(r => r.json()).then(s => {
             if (s.due_date && s.due_date.overdue > 0) {
                 const b = document.getElementById('gantt-overdue-badge');
                 b.textContent = '🔴 超期 ' + s.due_date.overdue;

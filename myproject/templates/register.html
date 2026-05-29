@@ -72,7 +72,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 <script>
 // 已登录则直接跳转首页
-if (localStorage.getItem('jwt_token')) { window.location.href = '/'; }
+if (false) { window.location.href = '/'; }
 
 const form = document.getElementById('register-form');
 const usernameInput = document.getElementById('username');
@@ -143,8 +143,6 @@ form.addEventListener('submit', async function(e) {
         });
         const data = await r.json();
         if (data.success) {
-            localStorage.setItem('jwt_token', data.token);
-            localStorage.setItem('jwt_user', JSON.stringify(data.user));
             showAlert('注册成功，正在进入系统…', 'success');
             setTimeout(() => { window.location.href = '/'; }, 800);
         } else {

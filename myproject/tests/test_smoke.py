@@ -25,6 +25,9 @@ class TestSmoke(unittest.TestCase):
 
     # ===== 首页 =====
     def test_homepage(self):
+        self.client.post('/api/auth/login', json={
+            'identity': 'admin', 'password': 'admin123',
+        })
         rv = self.client.get('/')
         self.assertEqual(rv.status_code, 200)
 

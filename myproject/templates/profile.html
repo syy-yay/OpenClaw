@@ -125,7 +125,7 @@ function toast(msg, type='success') {
 
 function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-function getToken() { return localStorage.getItem('jwt_token'); }
+() { return false; }
 
 function formatDate(d) {
     if (!d) return '-';
@@ -134,16 +134,14 @@ function formatDate(d) {
 
 async function loadProfile() {
     overlay.classList.add('active');
-    const token = getToken();
-    if (!token) {
+    
+    // session-based auth, no token needed
         window.location.href = '/login';
         return;
     }
     try {
-        const r = await fetch('/api/auth/me', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!r.ok) { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); window.location.href = '/login'; return; }
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { ; ; window.location.href = '/login'; return; }
         const data = await r.json();
         if (!data.authenticated) { window.location.href = '/login'; return; }
         renderProfile(data.user);
@@ -168,7 +166,7 @@ function renderProfile(user) {
     $('profile-created').textContent = formatDate(user.created_at);
     $('profile-login').textContent = formatDate(user.last_login) + (user.last_login ? '' : '（首次登录）');
     // Cache updated user data
-    localStorage.setItem('jwt_user', JSON.stringify(user));
+     JSON.stringify(user));
 }
 
 // 头像上传
@@ -197,7 +195,7 @@ avatarInput.addEventListener('change', async function() {
                 toast('头像更新成功');
                 // 更新 localStorage 中的用户缓存
                 const user = getUser();
-                if (user) { user.avatar_url = data.avatar_url; localStorage.setItem('jwt_user', JSON.stringify(user)); }
+                if (user) { user.avatar_url = data.avatar_url;  JSON.stringify(user)); }
             }
         } else {
             toast('上传失败', 'error');
@@ -211,19 +209,17 @@ avatarInput.addEventListener('change', async function() {
 });
 
 $('logout-btn').addEventListener('click', async function() {
-    const token = getToken();
+    
     try {
         await fetch('/api/auth/logout', {
             method: 'POST',
-            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
         });
     } catch(e) { /* ignore */ }
-    localStorage.removeItem('jwt_token');
-    localStorage.removeItem('jwt_user');
+    ;
+    ;
     toast('已退出登录');
     setTimeout(() => { window.location.href = '/login'; }, 600);
 });
-
 
 function toggleNotifPanel() {
     const p = document.getElementById('notif-panel'); const o = document.getElementById('notif-overlay');
@@ -237,7 +233,7 @@ function closeNotifPanel() {
 }
 async function loadNotifications() {
     try {
-        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications', { headers: () => ({}) });
         const notifs = await r.json(); const list = document.getElementById('notif-list');
         if (!list) return;
         if (!notifs.length) { list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>'; return; }
@@ -251,16 +247,16 @@ async function loadNotifications() {
 }
 async function loadUnreadCount() {
     try {
-        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications/unread-count', { headers: () => ({}) });
         const data = await r.json(); const badge = document.getElementById('notif-badge');
         if (!badge) return;
         if (data.count > 0) { badge.style.display = 'inline'; badge.textContent = data.count > 99 ? '99+' : data.count; }
         else { badge.style.display = 'none'; }
     } catch(e) {}
 }
-async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
 
 document.addEventListener('DOMContentLoaded', function() { setTimeout(loadUnreadCount, 500); setInterval(loadUnreadCount, 30000); loadProfile(); });
 </script>

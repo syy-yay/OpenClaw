@@ -319,17 +319,17 @@
         // ==================== JWT Auth ====================
         let currentUser = null;
 
-        function getToken() { return localStorage.getItem('jwt_token'); }
-        function getUser() {
-            try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; }
+        () { return false; }
+        () {
+            try { return JSON.parse(null); } catch(e) { return null; }
         }
-        function saveAuth(token, user) {
-            localStorage.setItem('jwt_token', token);
-            localStorage.setItem('jwt_user', JSON.stringify(user));
+        (token, user) {
+             token);
+             JSON.stringify(user));
         }
-        function clearAuth() {
-            localStorage.removeItem('jwt_token');
-            localStorage.removeItem('jwt_user');
+        () {
+            ;
+            ;
             currentUser = null;
         }
 
@@ -353,10 +353,10 @@
                     <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
                     <li><button class="dropdown-item" id="create-announcement-btn" onclick="showCreateAnnouncement()" style="display:none;"><i class="fas fa-bullhorn me-2"></i>发布公告</button></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
+                            <li><a class="dropdown-item text-danger" href="/api/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
                         </ul>
                     </div>`;
-                document.getElementById('logout-btn')?.addEventListener('click', logout);
+                
             } else {
                 container.innerHTML = `
                     <a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a>
@@ -365,34 +365,27 @@
         }
 
         async function checkAuth() {
-            const token = getToken();
+            
             if (!token) { currentUser = null; renderAuthControls(); return; }
             try {
-                const r = await fetch('/api/auth/me', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                const r = await fetch('/api/auth/me');
                 if (r.ok) {
                     const data = await r.json();
                     if (data.authenticated) {
                         currentUser = data.user;
-                        saveAuth(token, data.user);
-                    } else { clearAuth(); }
+                        token, data.user);
+                    } else { ; }
                 } else {
-                    clearAuth();
+                    ;
                 }
             } catch(e) { /* offline, use cached user */ }
             renderAuthControls();
         }
 
-        async function logout() {
-            const token = getToken();
-            try {
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        async function logout() { window.location.href = '/api/auth/logout'; } : {}
                 });
             } catch(e) { /* ignore */ }
-            clearAuth();
+            ;
             renderAuthControls();
             if (window.location.pathname !== '/') window.location.href = '/';
         }
@@ -531,7 +524,7 @@
 
         function renderRecentTasks() {
             try {
-                const recentIds = JSON.parse(localStorage.getItem('recent_tasks') || '[]');
+                const recentIds = JSON.parse(sessionStorage.getItem('recent_tasks') || '[]');
                 const card = document.getElementById('recent-tasks-card');
                 const body = document.getElementById('recent-tasks-body');
                 if (!recentIds.length || !card || !body) { if (card) card.style.display = 'none'; return; }
@@ -751,8 +744,6 @@
             taskCountEl.textContent = total;
         }
 
-
-
         async function deleteTask(taskId) {
             if (!confirm('确定要删除这个任务吗？')) return;
             try {
@@ -835,7 +826,7 @@
         }
         async function loadNotifications() {
             try {
-                const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+                const r = await fetch('/api/notifications', );
                 const notifs = await r.json();
                 const list = document.getElementById('notif-list');
                 if (!notifs.length) {
@@ -854,7 +845,7 @@
         }
         async function loadUnreadCount() {
             try {
-                const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+                const r = await fetch('/api/notifications/unread-count', );
                 const data = await r.json();
                 const badge = document.getElementById('notif-badge');
                 if (data.count > 0) { badge.style.display = 'inline'; badge.textContent = data.count > 99 ? '99+' : data.count; }
@@ -863,15 +854,15 @@
         }
         async function markRead(nid) {
             await fetch('/api/notifications/' + nid + '/read', { method: 'POST' });
-            loadNotifications(); loadUnreadCount();
+            loadNotifications(); 
         }
         async function markAllRead() {
             await fetch('/api/notifications/read-all', { method: 'POST' });
-            loadNotifications(); loadUnreadCount();
+            loadNotifications(); 
         }
         async function deleteNotif(nid) {
             await fetch('/api/notifications/' + nid, { method: 'DELETE' });
-            loadNotifications(); loadUnreadCount();
+            loadNotifications(); 
         }
 
         async function loadAnnouncements() {
@@ -909,7 +900,7 @@
                 this.disabled = true; this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>发布中...';
                 try {
                     const r = await fetch('/api/announcements', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                        method: 'POST', headers: { 'Content-Type': 'application/json',  },
                         body: JSON.stringify({ title, content })
                     });
                     if (r.ok) { 
@@ -949,19 +940,14 @@
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // 检查登录态（任务 API 无需认证，仅用于 UI 显示）
+            // 检查登录态（通过 session cookie，自动携带）
             await checkAuth();
-            // 有缓存用户信息也恢复显示
-            if (!currentUser && getUser()) {
-                currentUser = getUser();
-            }
-            renderAuthControls();
             loadAnnouncements();
             // 检查超期任务通知
             setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();
-            loadUnreadCount();
-            setInterval(loadUnreadCount, 30000);
+            
+            
             loadStats();
             fetchTasks();
             const ts = document.getElementById('last-refresh');

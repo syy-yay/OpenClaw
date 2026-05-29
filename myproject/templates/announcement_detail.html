@@ -78,31 +78,29 @@
 <script>
 /* Auth + Notifications */
 let currentUser = null;
-function getToken() { return localStorage.getItem('jwt_token'); }
-function getAuthHeader() { const t = getToken(); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
-function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
-function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+() { return false; }
+() { return {}; }
+() { try { return JSON.parse(null); } catch(e) { return null; } }
+() { ; ; currentUser = null; }
 function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function renderAuthControls() {
     const c = document.getElementById('auth-controls'); if (!c) return;
     const u = currentUser || getUser();
     if (u) {
         const init = (u.username || 'U')[0].toUpperCase();
-        c.innerHTML = '<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;"><span class="user-avatar-sm">' + init + '</span><span>' + escHtml(u.username) + '</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li></ul></div>';
-        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        c.innerHTML = '<div class="dropdown"><button class="btn btn-sm dropdown-toggle text-white border-0 d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="background:rgba(255,255,255,.15);border-radius:20px;"><span class="user-avatar-sm">' + init + '</span><span>' + escHtml(u.username) + '</span></button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li><li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="/api/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li></ul></div>';
+        
     } else {
         c.innerHTML = '<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>';
     }
 }
 async function checkAuth() {
-    const t = getToken(); if (!t) { currentUser = null; renderAuthControls(); return; }
-    try { const r = await fetch('/api/auth/me', { headers: getAuthHeader() }); if (r.ok) { const d = await r.json(); if (d.authenticated) currentUser = d.user; else clearAuth(); } else clearAuth(); } catch(e) {}
+    currentUser = null;
+    try { const r = await fetch('/api/auth/me'); if (r.ok) { const d = await r.json(); if (d.authenticated) currentUser = d.user; else ; } else ; } catch(e) {}
     renderAuthControls();
 }
-async function logout() {
-    const t = getToken();
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: t ? getAuthHeader() : {} }); } catch(e) {}
-    clearAuth(); renderAuthControls(); window.location.href = '/';
+async function logout() { window.location.href = '/api/auth/logout'; } }); } catch(e) {}
+    ; renderAuthControls(); window.location.href = '/';
 }
 function toggleNotifPanel() {
     const p = document.getElementById('notif-panel'), o = document.getElementById('notif-overlay');
@@ -116,7 +114,7 @@ function closeNotifPanel() {
 }
 async function loadNotifications() {
     try {
-        const r = await fetch('/api/notifications', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications', { headers: () => ({}) });
         const notifs = await r.json(); const list = document.getElementById('notif-list');
         if (!list) return;
         if (!notifs.length) { list.innerHTML = '<div class="text-center text-muted py-5"><i class="far fa-bell fa-2x mb-2"></i><p>暂无通知</p></div>'; return; }
@@ -129,16 +127,16 @@ async function loadNotifications() {
 }
 async function loadUnreadCount() {
     try {
-        const r = await fetch('/api/notifications/unread-count', { headers: getAuthHeader() });
+        const r = await fetch('/api/notifications/unread-count', { headers: () => ({}) });
         const d = await r.json(); const b = document.getElementById('notif-badge');
         if (!b) return;
         if (d.count > 0) { b.style.display = 'inline'; b.textContent = d.count > 99 ? '99+' : d.count; }
         else b.style.display = 'none';
     } catch(e) {}
 }
-async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
-async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: getAuthHeader() }); loadNotifications(); loadUnreadCount(); }
+async function markRead(nid) { await fetch('/api/notifications/' + nid + '/read', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function markAllRead() { await fetch('/api/notifications/read-all', { method: 'POST', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
+async function deleteNotif(nid) { await fetch('/api/notifications/' + nid, { method: 'DELETE', headers: () => ({}) }); loadNotifications(); loadUnreadCount(); }
 document.addEventListener('DOMContentLoaded', function() { checkAuth(); setTimeout(loadUnreadCount, 500); setInterval(loadUnreadCount, 30000); });
 </script>
 </body>

@@ -4,8 +4,7 @@ import os, re, time
 from datetime import datetime, timedelta, date
 from functools import wraps
 
-import jwt
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification, SearchHistory, Announcement
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -15,11 +14,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'tasks.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-
-    # JWT 配置
-    JWT_SECRET = os.environ.get('JWT_SECRET', 'jwt-secret-change-in-production')
-    JWT_ALGORITHM = 'HS256'
-    JWT_EXPIRATION_HOURS = 24
+    app.permanent_session_lifetime = timedelta(hours=24)
 
     db.init_app(app)
 
@@ -34,13 +29,46 @@ def create_app():
             db.session.add(admin)
             db.session.commit()
 
+    # ==================== 辅助函数 ====================
+    def get_current_user():
+        if 'user_id' not in session:
+            return None
+        user = User.query.get(session['user_id'])
+        if user and user.is_active:
+            return user
+        return None
+
+    def login_required(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            user = get_current_user()
+            if not user:
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': '未登录'}), 401
+                return redirect(url_for('login_page'))
+            request.current_user = user
+            return f(*args, **kwargs)
+        return decorated
+
+    def admin_required(f):
+        @wraps(f)
+        @login_required
+        def decorated(*args, **kwargs):
+            if not request.current_user.is_admin:
+                return jsonify({'error': '需要管理员权限'}), 403
+            return f(*args, **kwargs)
+        return decorated
+
     # ==================== 页面路由 ====================
     @app.route('/')
+    @login_required
     def index():
         return render_template('index.html')
 
     @app.route('/login')
     def login_page():
+        if get_current_user():
+            return redirect(url_for('index'))
         return render_template('login.html')
 
     @app.route('/gantt')
@@ -54,42 +82,8 @@ def create_app():
 
     @app.route('/register')
     def register_page():
-        return render_template('register.html')
-
-    # ==================== JWT 辅助函数 ====================
-    def generate_token(user_id):
-        payload = {
-            'user_id': user_id,
-            'exp': datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
-            'iat': datetime.utcnow(),
-        }
-        return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-    def verify_token(token):
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            return payload['user_id']
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            return None
-
-    def login_required(f):
-        @wraps(f)
-        def decorated(*args, **kwargs):
-            auth = request.headers.get('Authorization', '')
-            if not auth.startswith('Bearer '):
-                return jsonify({'error': '未提供认证令牌'}), 401
-            token = auth[7:]
-            user_id = verify_token(token)
-            if not user_id:
-                return jsonify({'error': '令牌无效或已过期'}), 401
-            user = User.query.get(user_id)
-            if not user or not user.is_active:
-                return jsonify({'error': '用户不存在或已禁用'}), 401
-            request.current_user = user
-            return f(*args, **kwargs)
-        return decorated
-
-    # ==================== 认证 API ====================
+        if get_current_user():
+            return redirect(url_for('index'))
     @app.route('/api/auth/register', methods=['POST'])
     def register():
         data = request.get_json() or {}
@@ -120,10 +114,10 @@ def create_app():
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
-            token = generate_token(user.id)
+            session['user_id'] = user.id
+            session.permanent = True
             return jsonify({
                 'success': True, 'message': '注册成功',
-                'token': token,
                 'user': user.to_dict()
             }), 201
         except Exception:
@@ -143,21 +137,24 @@ def create_app():
         if not user or not user.check_password(password) or not user.is_active:
             return jsonify({'success': False, 'message': '账号或密码错误'}), 401
 
-        token = generate_token(user.id)
+        session['user_id'] = user.id
+        session.permanent = True
         return jsonify({
             'success': True, 'message': '登录成功',
-            'token': token,
             'user': user.to_dict()
         })
 
-    @app.route('/api/auth/logout', methods=['POST'])
+    @app.route('/api/auth/logout', methods=['GET'])
     def logout():
-        return jsonify({'success': True, 'message': '已退出登录'})
+        session.pop('user_id', None)
+        return redirect(url_for('login_page'))
 
     @app.route('/api/auth/me', methods=['GET'])
-    @login_required
     def auth_me():
-        return jsonify({'authenticated': True, 'user': request.current_user.to_dict(full=True)})
+        user = get_current_user()
+        if user:
+            return jsonify({'authenticated': True, 'user': user.to_dict(full=True)})
+        return jsonify({'authenticated': False}), 401
 
     # ==================== 任务 API ====================
     @app.route('/api/tasks/stats', methods=['GET'])
@@ -821,17 +818,8 @@ def create_app():
         if len(title) > 200:
             return jsonify({'error': '标题不能超过200字符'}), 400
 
-        # 检查管理员权限（通过 JWT token）
-        user = None
-        auth = request.headers.get('Authorization', '')
-        if auth.startswith('Bearer '):
-            uid = verify_token(auth[7:])
-            if uid:
-                u = User.query.get(uid)
-                if u and u.is_admin:
-                    user = u
-
-        if not user:
+        user = get_current_user()
+        if not user or not user.is_admin:
             return jsonify({'error': '仅管理员可发布公告'}), 403
 
         is_pinned = data.get('is_pinned', False)
@@ -845,15 +833,8 @@ def create_app():
     def delete_announcement(ann_id):
         """删除公告（管理员权限）"""
         ann = Announcement.query.get_or_404(ann_id)
-        user = None
-        auth = request.headers.get('Authorization', '')
-        if auth.startswith('Bearer '):
-            uid = verify_token(auth[7:])
-            if uid:
-                u = User.query.get(uid)
-                if u and u.is_admin:
-                    user = u
-        if not user:
+        user = get_current_user()
+        if not user or not user.is_admin:
             return jsonify({'error': '仅管理员可删除公告'}), 403
 
         db.session.delete(ann)
@@ -864,15 +845,8 @@ def create_app():
     def toggle_pin_announcement(ann_id):
         """切换置顶状态（管理员权限）"""
         ann = Announcement.query.get_or_404(ann_id)
-        user = None
-        auth = request.headers.get('Authorization', '')
-        if auth.startswith('Bearer '):
-            uid = verify_token(auth[7:])
-            if uid:
-                u = User.query.get(uid)
-                if u and u.is_admin:
-                    user = u
-        if not user:
+        user = get_current_user()
+        if not user or not user.is_admin:
             return jsonify({'error': '仅管理员可操作'}), 403
 
         ann.is_pinned = not ann.is_pinned

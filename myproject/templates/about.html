@@ -232,9 +232,9 @@
 <script>
 /* ========== Auth ========== */
 let currentUser = null;
-function getToken() { return localStorage.getItem('jwt_token'); }
-function getUser() { try { return JSON.parse(localStorage.getItem('jwt_user')); } catch(e) { return null; } }
-function clearAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); currentUser = null; }
+() { return false; }
+() { try { return JSON.parse(null); } catch(e) { return null; } }
+() { ; ; currentUser = null; }
 function escHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 function renderAuthControls() {
@@ -252,33 +252,33 @@ function renderAuthControls() {
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="/profile"><i class="far fa-user me-2"></i>个人资料</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><button class="dropdown-item text-danger" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i>退出登录</button></li>
+                    <li><a class="dropdown-item text-danger" href="/api/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
                 </ul>
             </div>`;
-        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        
     } else {
         container.innerHTML = `<a href="/login" class="auth-link"><i class="fas fa-sign-in-alt me-1"></i>登录</a><a href="/register" class="auth-link auth-link-primary"><i class="fas fa-user-plus me-1"></i>注册</a>`;
     }
 }
 
 async function checkAuth() {
-    const token = getToken();
+    
     if (!token) { currentUser = null; renderAuthControls(); return; }
     try {
-        const r = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const r = await fetch('/api/auth/me');
         if (r.ok) {
             const data = await r.json();
             if (data.authenticated) { currentUser = data.user; }
-            else { clearAuth(); }
-        } else { clearAuth(); }
+            else { ; }
+        } else { ; }
     } catch(e) {}
     renderAuthControls();
 }
 
 async function logout() {
-    const token = getToken();
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: token ? { 'Authorization': 'Bearer ' + token } : {} }); } catch(e) {}
-    clearAuth(); renderAuthControls(); window.location.href = '/';
+    
+    try { await  } catch(e) {}
+    ; renderAuthControls(); window.location.href = '/';
 }
 
 /* ========== 系统状态检测 ========== */
@@ -289,8 +289,8 @@ async function checkSystemStatus() {
     const uptimeEl = document.getElementById('status-uptime');
 
     // API 健康检查
-    const token = getToken();
-    const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    
+    
     const apiOk = document.getElementById('status-api');
 
     try {
@@ -310,7 +310,7 @@ async function checkSystemStatus() {
 
     // 用户数
     try {
-        const r = await fetch('/api/auth/me', { headers });
+        const r = await fetch('/api/auth/me');
         if (r.ok) {
             const data = await r.json();
             if (data.authenticated) currentUser = data.user;
