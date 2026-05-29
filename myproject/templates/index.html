@@ -111,6 +111,23 @@
     </header>
 
     <div class="container mt-4 mb-5">
+        <!-- 公告栏 -->
+        <div id="announcement-bar" style="display:none;" class="mb-4">
+            <div class="card border-0 bg-white shadow-sm">
+                <div class="card-body py-2 px-3" id="announcement-content">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-danger rounded-pill px-2"><i class="fas fa-bullhorn me-1"></i>公告</span>
+                        <span id="announcement-text" class="small flex-grow-1"></span>
+                        <small class="text-muted" id="announcement-time"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="announcement-more" style="display:none;" class="mb-3 text-center">
+            <button class="btn btn-sm btn-link text-decoration-none" onclick="showAllAnnouncements()">
+                <i class="fas fa-chevron-down me-1"></i>查看更多公告
+            </button>
+        </div>
         <div class="row mb-4">
             <div class="col-md-3 col-sm-6 mb-3">
                 <div class="card stats-card bg-white" style="animation:fadeInUp .35s ease both;">
@@ -854,6 +871,38 @@
             loadNotifications(); loadUnreadCount();
         }
 
+        async function loadAnnouncements() {
+            try {
+                const r = await fetch('/api/announcements');
+                const anns = await r.json();
+                const bar = document.getElementById('announcement-bar');
+                const more = document.getElementById('announcement-more');
+                if (!anns.length) { bar.style.display = 'none'; more.style.display = 'none'; return; }
+                bar.style.display = 'block';
+                const pinned = anns.filter(a => a.is_pinned);
+                const top = pinned.length ? pinned[0] : anns[0];
+                document.getElementById('announcement-text').innerHTML = '<a href="/announcement/' + top.id + '" class="text-decoration-none text-dark fw-semibold">' + escapeHtml(top.title) + '</a>';
+                document.getElementById('announcement-time').textContent = new Date(top.created_at).toLocaleDateString('zh-CN');
+                if (anns.length > 1) more.style.display = 'block';
+                else more.style.display = 'none';
+                // 存全局
+                window.allAnnouncements = anns;
+            } catch(e) {}
+        }
+
+        function showAllAnnouncements() {
+            const anns = window.allAnnouncements || [];
+            if (!anns.length) return;
+            const modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = 'annModal';
+            modal.innerHTML = '<div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"><i class="fas fa-bullhorn me-2"></i>全部公告</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">'
+                + anns.map(a => '<div class="mb-3 p-3 border rounded-3 ' + (a.is_pinned ? 'bg-warning bg-opacity-10 border-warning' : '') + '"><div class="d-flex justify-content-between align-items-start"><h6 class="mb-1">' + (a.is_pinned ? '<i class="fas fa-thumbtack me-1 text-warning"></i>' : '') + escapeHtml(a.title) + '</h6><small class="text-muted">' + new Date(a.created_at).toLocaleString('zh-CN') + '</small></div><p class="mb-0 small text-muted">' + escapeHtml(a.content) + '</p><small class="text-muted">—— ' + escapeHtml(a.author) + '</small></div>').join('')
+                + '</div></div></div>';
+            document.body.appendChild(modal);
+            new bootstrap.Modal(modal).show();
+            modal.addEventListener('hidden.bs.modal', () => modal.remove());
+        }
+
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -864,6 +913,7 @@
                 currentUser = getUser();
             }
             renderAuthControls();
+            loadAnnouncements();
             // 检查超期任务通知
             setTimeout(checkOverdueNotifications, 1000);
             document.getElementById('task-title').focus();

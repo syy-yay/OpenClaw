@@ -6,7 +6,7 @@ from functools import wraps
 
 import jwt
 from flask import Flask, request, jsonify, render_template
-from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification, SearchHistory
+from models import db, Task, User, Tag, task_tags, Comment, Note, Attachment, Notification, SearchHistory, Announcement
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -46,6 +46,11 @@ def create_app():
     @app.route('/gantt')
     def gantt_page():
         return render_template('gantt.html')
+
+    @app.route('/announcement/<int:ann_id>')
+    def announcement_page(ann_id):
+        ann = Announcement.query.get_or_404(ann_id)
+        return render_template('announcement_detail.html', announcement=ann)
 
     @app.route('/register')
     def register_page():
@@ -789,6 +794,90 @@ def create_app():
         SearchHistory.query.delete()
         db.session.commit()
         return jsonify({'success': True, 'message': '搜索历史已清空'})
+
+    # ==================== 公告 API ====================
+    @app.route('/api/announcements', methods=['GET'])
+    def get_announcements():
+        """获取公告列表（置顶优先，按时间倒序）"""
+        anns = Announcement.query.order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc()).all()
+        return jsonify([a.to_dict() for a in anns])
+
+    @app.route('/api/announcements/<int:ann_id>', methods=['GET'])
+    def get_announcement(ann_id):
+        ann = Announcement.query.get_or_404(ann_id)
+        return jsonify(ann.to_dict())
+
+    @app.route('/api/announcements', methods=['POST'])
+    def create_announcement():
+        """发布公告（需要管理员权限）"""
+        data = request.get_json() or {}
+        title = (data.get('title') or '').strip()
+        content_text = (data.get('content') or '').strip()
+
+        if not title:
+            return jsonify({'error': '公告标题不能为空'}), 400
+        if not content_text:
+            return jsonify({'error': '公告内容不能为空'}), 400
+        if len(title) > 200:
+            return jsonify({'error': '标题不能超过200字符'}), 400
+
+        # 检查管理员权限（通过 JWT token）
+        user = None
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            uid = verify_token(auth[7:])
+            if uid:
+                u = User.query.get(uid)
+                if u and u.is_admin:
+                    user = u
+
+        if not user:
+            return jsonify({'error': '仅管理员可发布公告'}), 403
+
+        is_pinned = data.get('is_pinned', False)
+        ann = Announcement(title=title, content=content_text, author_id=user.id, is_pinned=is_pinned)
+        db.session.add(ann)
+        db.session.commit()
+
+        return jsonify(ann.to_dict()), 201
+
+    @app.route('/api/announcements/<int:ann_id>', methods=['DELETE'])
+    def delete_announcement(ann_id):
+        """删除公告（管理员权限）"""
+        ann = Announcement.query.get_or_404(ann_id)
+        user = None
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            uid = verify_token(auth[7:])
+            if uid:
+                u = User.query.get(uid)
+                if u and u.is_admin:
+                    user = u
+        if not user:
+            return jsonify({'error': '仅管理员可删除公告'}), 403
+
+        db.session.delete(ann)
+        db.session.commit()
+        return jsonify({'success': True, 'message': '公告已删除'})
+
+    @app.route('/api/announcements/<int:ann_id>/pin', methods=['POST'])
+    def toggle_pin_announcement(ann_id):
+        """切换置顶状态（管理员权限）"""
+        ann = Announcement.query.get_or_404(ann_id)
+        user = None
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            uid = verify_token(auth[7:])
+            if uid:
+                u = User.query.get(uid)
+                if u and u.is_admin:
+                    user = u
+        if not user:
+            return jsonify({'error': '仅管理员可操作'}), 403
+
+        ann.is_pinned = not ann.is_pinned
+        db.session.commit()
+        return jsonify({'success': True, 'announcement': ann.to_dict()})
     return app
 
 

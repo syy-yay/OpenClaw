@@ -301,3 +301,32 @@ class SearchHistory(db.Model):
             'keyword': self.keyword,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class Announcement(db.Model):
+    # 团队公告
+    __tablename__ = 'announcements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    is_pinned = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    author = db.relationship('User', backref=db.backref('announcements', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'content': self.content,
+            'author': self.author.username if self.author else '系统',
+            'is_pinned': self.is_pinned,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+    def __repr__(self):
+        return '<Announcement {}: {}>'.format(self.id, self.title[:30])
