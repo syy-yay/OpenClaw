@@ -18,10 +18,17 @@ spec:
       labels:
         app: openclaw-app
     spec:
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: openclaw-pvc
       containers:
       - name: openclaw-app
         image: 192.168.1.200:5000/openclaw/myapp:e06c97c
         ports:
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
         - containerPort: 5000
 ---
 apiVersion: v1
@@ -33,6 +40,9 @@ spec:
   selector:
     app: openclaw-app
   ports:
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
   - port: 80
     targetPort: 5000
   type: NodePort
